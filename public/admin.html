@@ -2,15 +2,56 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Torneo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin - Torneo Americano</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-    <header><h1>Admin</h1></header>
-    <main id="admin-app">
-        <!-- Login form o Panel admin -->
-    </main>
-    <script type="module" src="js/admin.js"></script>
+<body class="admin-body">
+
+<header class="app-header" id="login-section">
+    <h1>Torneo Americano</h1>
+</header>
+
+<main>
+    <section id="login-container-wrapper">
+        <div class="login-container">
+            <h2>Acceso Admin</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" placeholder="admin@ejemplo.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary btn-block" id="login-btn">Ingresar</button>
+        </div>
+    </section>
+
+    <div id="admin-panel" style="display:none;">
+        <header class="app-header">
+            <div class="admin-header">
+                <h1>Admin</h1>
+                <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;" id="logout-btn">Salir</button>
+            </div>
+            <nav class="tab-nav">
+                <button class="admin-tab-btn active" data-panel="jugadores" onclick="showPanel('jugadores')">Jugadores</button>
+                <button class="admin-tab-btn" data-panel="eliminatoria" onclick="showPanel('eliminatoria')">Eliminatoria</button>
+                <button class="admin-tab-btn" data-panel="cuartos-admin" onclick="showPanel('cuartos-admin')">Cuartos</button>
+                <button class="admin-tab-btn" data-panel="semis-admin" onclick="showPanel('semis-admin')">Semifinales</button>
+                <button class="admin-tab-btn" data-panel="final-admin" onclick="showPanel('final-admin')">Final</button>
+            </nav>
+        </header>
+
+        <div id="panel-jugadores" class="admin-panel active"></div>
+        <div id="panel-eliminatoria" class="admin-panel"></div>
+        <div id="panel-cuartos-admin" class="admin-panel"></div>
+        <div id="panel-semis-admin" class="admin-panel"></div>
+        <div id="panel-final-admin" class="admin-panel"></div>
+    </div>
+</main>
+
+<script type="module" src="js/admin.js"></script>
+
 </body>
 </html>

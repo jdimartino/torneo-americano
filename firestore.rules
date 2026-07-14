@@ -2,8 +2,28 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para lectura pública de torneos
-    match /{document=**} {
+
+    match /jugadores/{jugadorId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /partidos_eliminatoria/{partidoId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /cuartos/{cuartoId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /semifinales/{semiId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /final/{finalId} {
       allow read: if true;
       allow write: if request.auth != null;
     }
