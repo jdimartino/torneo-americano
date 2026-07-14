@@ -11,6 +11,7 @@ let allFinales = [];
 let editingPartidoId = null;
 let score1 = 0;
 let score2 = 0;
+let dataLoaded = false;
 
 function esc(s) {
     if (!s) return '';
@@ -33,6 +34,28 @@ function toast(msg, type) {
     setTimeout(() => t.remove(), 2800);
 }
 
+function showLoading(msg) {
+    let overlay = document.getElementById('global-loading');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'global-loading';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = '<div class="loading-content"><div class="tennis-ball-spinner"></div><div class="loading-text"></div></div>';
+        document.body.appendChild(overlay);
+    }
+    overlay.querySelector('.loading-text').textContent = msg || 'Procesando...';
+    overlay.style.display = 'flex';
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('global-loading');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function panelLoading(panel, msg) {
+    panel.innerHTML = '<div class="panel-loading"><div class="tennis-ball-spinner"></div><div class="loading-text">' + (msg || 'Cargando...') + '</div></div>';
+}
+
 function getPlayerName(id) {
     const j = allJugadores.find(x => x.id === id);
     return j ? (j.nombre + ' ' + j.apellidos) : '';
@@ -45,12 +68,15 @@ function parseScore(scoreStr) {
 }
 
 // ── Auth ──
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('login-container-wrapper').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
-        loadData();
+        panelLoading(document.getElementById('panel-jugadores'), 'Cargando jugadores...');
+        await loadData();
+        dataLoaded = true;
+        renderPanel('jugadores');
     } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('login-container-wrapper').style.display = 'block';
@@ -98,6 +124,7 @@ window.showPanel = function(panelId) {
     if (btn) btn.classList.add('active');
     const content = document.getElementById('panel-' + panelId);
     if (content) content.classList.add('active');
+    if (!dataLoaded) return;
     renderPanel(panelId);
 };
 
@@ -105,7 +132,7 @@ window.showPanel = function(panelId) {
 async function loadData() {
     try {
         const [j, p, c, s, f] = await Promise.all([
-            getDocs(query(collection(db, 'jugadores'), orderBy('apellidos'))),
+            getDocs(query(collection(db, 'jugadores'), orderBy('nombre'))),
             getDocs(query(collection(db, 'partidos_eliminatoria'), orderBy('fecha', 'desc'))),
             getDocs(query(collection(db, 'cuartos'), orderBy('grupo'))),
             getDocs(query(collection(db, 'semifinales'), orderBy('cruce'))),
@@ -140,18 +167,6 @@ function renderPanel(panelId) {
 // ═══════════════════════════════════════════
 function renderJugadores() {
     const panel = document.getElementById('panel-jugadores');
-    const sorted = [...allJugadores].sort((a, b) => {
-        const apA = (a.apellidos || '').toLowerCase();
-        const apB = (b.apellidos || '').toLowerCase();
-        if (apA !== apB) return apA.localeCompare(apB);
-        return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
-    });
-    const term = jugadorSearchTerm.toLowerCase();
-    const filtered = term ? sorted.filter(j => {
-        const haystack = [j.nombre, j.apellidos, j.categoria, j.telefono, j.email, j.numero_accion].join(' ').toLowerCase();
-        return haystack.includes(term);
-    }) : sorted;
-
     panel.innerHTML =
         '<div class="card">' +
         '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">person_add</span> Nuevo Jugador</h3>' +
@@ -168,8 +183,39 @@ function renderJugadores() {
         '<div class="checkbox-group"><input type="checkbox" id="j-pago"><label for="j-pago"><span class="material-symbols-outlined" style="font-size:1rem;color:var(--primary);">payments</span> Pago Recibido</label></div>' +
         '<button class="btn btn-primary btn-block" id="btn-add-jugador"><span class="material-symbols-outlined" style="font-size:1rem;">person_add</span> Agregar Jugador</button>' +
         '</div>' +
-        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos (' + filtered.length + (term ? ' de ' + allJugadores.length : '') + ')</div>' +
-        '<div class="search-bar"><span class="material-symbols-outlined search-icon">search</span><input type="text" id="jugador-search" placeholder="Buscar jugador..." value="' + esc(jugadorSearchTerm) + '"></div>' +
+        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos</div>' +
+        '<div class="search-bar"><span class="material-symbols-outlined search-icon">search</span><input type="text" id="jugador-search" placeholder="Buscar por nombre, categoría, email..." value="' + esc(jugadorSearchTerm) + '"></div>' +
+        '<div id="jugadores-list"></div>';
+
+    document.getElementById('btn-add-jugador').addEventListener('click', addJugador);
+    document.getElementById('jugador-search').addEventListener('input', (e) => {
+        jugadorSearchTerm = e.target.value;
+        renderJugadoresList();
+    });
+    renderJugadoresList();
+}
+
+function renderJugadoresList() {
+    const listEl = document.getElementById('jugadores-list');
+    if (!listEl) return;
+    const sorted = [...allJugadores].sort((a, b) => {
+        const nA = (a.nombre || '').toLowerCase();
+        const nB = (b.nombre || '').toLowerCase();
+        if (nA !== nB) return nA.localeCompare(nB);
+        return (a.apellidos || '').toLowerCase().localeCompare((b.apellidos || '').toLowerCase());
+    });
+    const term = jugadorSearchTerm.toLowerCase();
+    const filtered = term ? sorted.filter(j => {
+        const haystack = [j.nombre, j.apellidos, j.categoria, j.telefono, j.email, j.numero_accion].join(' ').toLowerCase();
+        return haystack.includes(term);
+    }) : sorted;
+
+    const title = document.querySelector('#panel-jugadores .admin-section-title');
+    if (title) {
+        title.innerHTML = '<span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos (' + filtered.length + (term ? ' de ' + allJugadores.length : '') + ')';
+    }
+
+    listEl.innerHTML =
         (!filtered.length ? '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">' + (term ? 'search_off' : 'group_off') + '</span><p>' + (term ? 'No se encontraron resultados' : 'No hay jugadores inscritos') + '</p></div>' : '') +
         filtered.map(j =>
             '<div class="player-card">' +
@@ -194,13 +240,8 @@ function renderJugadores() {
             '</div>'
         ).join('');
 
-    document.getElementById('btn-add-jugador').addEventListener('click', addJugador);
-    document.getElementById('jugador-search').addEventListener('input', (e) => {
-        jugadorSearchTerm = e.target.value;
-        renderJugadores();
-    });
-    panel.querySelectorAll('[data-edit-jugador]').forEach(b => b.addEventListener('click', () => editJugador(b.dataset.editJugador)));
-    panel.querySelectorAll('[data-del-jugador]').forEach(b => b.addEventListener('click', () => deleteJugador(b.dataset.delJugador)));
+    listEl.querySelectorAll('[data-edit-jugador]').forEach(b => b.addEventListener('click', () => editJugador(b.dataset.editJugador)));
+    listEl.querySelectorAll('[data-del-jugador]').forEach(b => b.addEventListener('click', () => deleteJugador(b.dataset.delJugador)));
 }
 
 async function addJugador() {
@@ -215,9 +256,17 @@ async function addJugador() {
         JJ: 0, JG: 0
     };
     if (!data.nombre || !data.apellidos) { toast('Nombre y apellidos requeridos', 'error'); return; }
-    await addDoc(collection(db, 'jugadores'), data);
-    toast('Jugador agregado', 'success');
-    await refreshData();
+    showLoading('Agregando jugador...');
+    try {
+        await addDoc(collection(db, 'jugadores'), data);
+        toast('Jugador agregado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al agregar jugador', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 function editJugador(id) {
@@ -235,26 +284,42 @@ function editJugador(id) {
     btn.classList.remove('btn-primary');
     btn.classList.add('btn-warning');
     btn.onclick = async () => {
-        await updateDoc(doc(db, 'jugadores', id), {
-            nombre: document.getElementById('j-nombre').value.trim(),
-            apellidos: document.getElementById('j-apellidos').value.trim(),
-            categoria: document.getElementById('j-categoria').value.trim(),
-            telefono: document.getElementById('j-telefono').value.trim(),
-            email: document.getElementById('j-email').value.trim(),
-            numero_accion: document.getElementById('j-accion').value.trim(),
-            pago_recibido: document.getElementById('j-pago').checked
-        });
-        toast('Jugador actualizado', 'success');
-        await refreshData();
+        showLoading('Guardando cambios...');
+        try {
+            await updateDoc(doc(db, 'jugadores', id), {
+                nombre: document.getElementById('j-nombre').value.trim(),
+                apellidos: document.getElementById('j-apellidos').value.trim(),
+                categoria: document.getElementById('j-categoria').value.trim(),
+                telefono: document.getElementById('j-telefono').value.trim(),
+                email: document.getElementById('j-email').value.trim(),
+                numero_accion: document.getElementById('j-accion').value.trim(),
+                pago_recibido: document.getElementById('j-pago').checked
+            });
+            toast('Jugador actualizado', 'success');
+            await refreshData();
+        } catch (e) {
+            toast('Error al actualizar', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
     };
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function deleteJugador(id) {
     if (!confirm('¿Eliminar este jugador?')) return;
-    await deleteDoc(doc(db, 'jugadores', id));
-    toast('Jugador eliminado', 'success');
-    await refreshData();
+    showLoading('Eliminando jugador...');
+    try {
+        await deleteDoc(doc(db, 'jugadores', id));
+        toast('Jugador eliminado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al eliminar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -390,11 +455,19 @@ async function savePartido() {
     batch.update(doc(db, 'jugadores', p2c), { JG: increment(score2), JJ: increment(editingPartidoId ? 0 : 1) });
     batch.update(doc(db, 'jugadores', p2d), { JG: increment(score2), JJ: increment(editingPartidoId ? 0 : 1) });
 
-    await batch.commit();
-    const wasEditing = !!editingPartidoId;
-    editingPartidoId = null;
-    toast(wasEditing ? 'Partido actualizado' : 'Partido registrado', 'success');
-    await refreshData();
+    showLoading(editingPartidoId ? 'Actualizando partido...' : 'Registrando partido...');
+    try {
+        await batch.commit();
+        const wasEditing = !!editingPartidoId;
+        editingPartidoId = null;
+        toast(wasEditing ? 'Partido actualizado' : 'Partido registrado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al guardar partido', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 function startEditPartido(id) {
@@ -406,15 +479,23 @@ async function deletePartido(id) {
     if (!confirm('¿Eliminar este partido? Se descontarán JJ y JG.')) return;
     const p = allPartidos.find(x => x.id === id);
     if (!p) return;
-    const batch = writeBatch(db);
-    if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-    if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-    if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
-    if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
-    batch.delete(doc(db, 'partidos_eliminatoria', id));
-    await batch.commit();
-    toast('Partido eliminado', 'success');
-    await refreshData();
+    showLoading('Eliminando partido...');
+    try {
+        const batch = writeBatch(db);
+        if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+        if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+        if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        batch.delete(doc(db, 'partidos_eliminatoria', id));
+        await batch.commit();
+        toast('Partido eliminado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al eliminar partido', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -470,53 +551,84 @@ function renderCuartosAdmin() {
 }
 
 async function generarCuartos() {
-    const sorted = [...allJugadores].sort((a, b) => (b.JG || 0) - (a.JG || 0));
-    if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); return; }
-    const top16 = sorted.slice(0, 16);
-    const grupos = [
-        { grupo: 1, p1a: top16[0], p1b: top16[15], p2a: top16[7], p2b: top16[8] },
-        { grupo: 2, p1a: top16[4], p1b: top16[11], p2a: top16[3], p2b: top16[12] },
-        { grupo: 3, p1a: top16[1], p1b: top16[14], p2a: top16[6], p2b: top16[9] },
-        { grupo: 4, p1a: top16[5], p1b: top16[10], p2a: top16[2], p2b: top16[13] }
-    ];
-    const batch = writeBatch(db);
-    for (const g of grupos) {
-        const ref = doc(collection(db, 'cuartos'));
-        batch.set(ref, {
-            grupo: g.grupo,
-            pareja1_id_a: g.p1a.id, pareja1_id_b: g.p1b.id,
-            pareja1_nombre: g.p1a.nombre + ' ' + g.p1a.apellidos + ' + ' + g.p1b.nombre + ' ' + g.p1b.apellidos,
-            pareja2_id_a: g.p2a.id, pareja2_id_b: g.p2b.id,
-            pareja2_nombre: g.p2a.nombre + ' ' + g.p2a.apellidos + ' + ' + g.p2b.nombre + ' ' + g.p2b.apellidos,
-            score: '', ganador: ''
-        });
+    showLoading('Generando cuartos...');
+    try {
+        const sorted = [...allJugadores].sort((a, b) => (b.JG || 0) - (a.JG || 0));
+        if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); hideLoading(); return; }
+        const top16 = sorted.slice(0, 16);
+        const grupos = [
+            { grupo: 1, p1a: top16[0], p1b: top16[15], p2a: top16[7], p2b: top16[8] },
+            { grupo: 2, p1a: top16[4], p1b: top16[11], p2a: top16[3], p2b: top16[12] },
+            { grupo: 3, p1a: top16[1], p1b: top16[14], p2a: top16[6], p2b: top16[9] },
+            { grupo: 4, p1a: top16[5], p1b: top16[10], p2a: top16[2], p2b: top16[13] }
+        ];
+        const batch = writeBatch(db);
+        for (const g of grupos) {
+            const ref = doc(collection(db, 'cuartos'));
+            batch.set(ref, {
+                grupo: g.grupo,
+                pareja1_id_a: g.p1a.id, pareja1_id_b: g.p1b.id,
+                pareja1_nombre: g.p1a.nombre + ' ' + g.p1a.apellidos + ' + ' + g.p1b.nombre + ' ' + g.p1b.apellidos,
+                pareja2_id_a: g.p2a.id, pareja2_id_b: g.p2b.id,
+                pareja2_nombre: g.p2a.nombre + ' ' + g.p2a.apellidos + ' + ' + g.p2b.nombre + ' ' + g.p2b.apellidos,
+                score: '', ganador: ''
+            });
+        }
+        await batch.commit();
+        toast('Cuartos generados', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al generar cuartos', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
     }
-    await batch.commit();
-    toast('Cuartos generados', 'success');
-    await refreshData();
 }
 
 async function regenerarCuartos() {
-    const batch = writeBatch(db);
-    allCuartos.forEach(c => batch.delete(doc(db, 'cuartos', c.id)));
-    await batch.commit();
-    await refreshData();
-    await generarCuartos();
+    showLoading('Regenerando cuartos...');
+    try {
+        const batch = writeBatch(db);
+        allCuartos.forEach(c => batch.delete(doc(db, 'cuartos', c.id)));
+        await batch.commit();
+        await refreshData();
+        await generarCuartos();
+    } catch (e) {
+        toast('Error al regenerar', 'error');
+        console.error(e);
+        hideLoading();
+    }
 }
 
 async function saveCuarto(id) {
     const score = document.getElementById('c-score-' + id).value.trim();
     const ganador = document.getElementById('c-ganador-' + id).value;
-    await updateDoc(doc(db, 'cuartos', id), { score, ganador });
-    toast('Cuarto guardado', 'success');
-    await refreshData();
+    showLoading('Guardando cuarto...');
+    try {
+        await updateDoc(doc(db, 'cuartos', id), { score, ganador });
+        toast('Cuarto guardado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al guardar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 async function deleteCuarto(id) {
     if (!confirm('¿Eliminar este cuarto?')) return;
-    await deleteDoc(doc(db, 'cuartos', id));
-    toast('Cuarto eliminado', 'success');
-    await refreshData();
+    showLoading('Eliminando cuarto...');
+    try {
+        await deleteDoc(doc(db, 'cuartos', id));
+        toast('Cuarto eliminado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al eliminar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -582,17 +694,33 @@ function renderSemisAdmin() {
 async function saveSemi(id) {
     const score = document.getElementById('s-score-' + id).value.trim();
     const ganador = document.getElementById('s-ganador-' + id).value;
-    await updateDoc(doc(db, 'semifinales', id), { score, ganador });
-    toast('Semifinal guardada', 'success');
-    await refreshData();
-    if (allSemis.every(s => s.ganador)) await generarFinal();
+    showLoading('Guardando semifinal...');
+    try {
+        await updateDoc(doc(db, 'semifinales', id), { score, ganador });
+        toast('Semifinal guardada', 'success');
+        await refreshData();
+        if (allSemis.every(s => s.ganador)) await generarFinal();
+    } catch (e) {
+        toast('Error al guardar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 async function deleteSemi(id) {
     if (!confirm('¿Eliminar esta semifinal?')) return;
-    await deleteDoc(doc(db, 'semifinales', id));
-    toast('Semifinal eliminada', 'success');
-    await refreshData();
+    showLoading('Eliminando semifinal...');
+    try {
+        await deleteDoc(doc(db, 'semifinales', id));
+        toast('Semifinal eliminada', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al eliminar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -647,14 +775,30 @@ function renderFinalAdmin() {
     panel.querySelector('[data-save-final]').addEventListener('click', async () => {
         const score = document.getElementById('f-score-' + f.id).value.trim();
         const ganador = document.getElementById('f-ganador-' + f.id).value;
-        await updateDoc(doc(db, 'final', f.id), { score, ganador });
-        toast('Final guardada', 'success');
-        await refreshData();
+        showLoading('Guardando final...');
+        try {
+            await updateDoc(doc(db, 'final', f.id), { score, ganador });
+            toast('Final guardada', 'success');
+            await refreshData();
+        } catch (e) {
+            toast('Error al guardar', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
     });
     panel.querySelector('[data-del-final]').addEventListener('click', async () => {
         if (!confirm('¿Eliminar la final?')) return;
-        await deleteDoc(doc(db, 'final', f.id));
-        toast('Final eliminada', 'success');
-        await refreshData();
+        showLoading('Eliminando final...');
+        try {
+            await deleteDoc(doc(db, 'final', f.id));
+            toast('Final eliminada', 'success');
+            await refreshData();
+        } catch (e) {
+            toast('Error al eliminar', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
     });
 }
