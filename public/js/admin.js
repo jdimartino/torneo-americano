@@ -8,9 +8,6 @@ let allPartidos = [];
 let allCuartos = [];
 let allSemis = [];
 let allFinales = [];
-let editingPartidoId = null;
-let score1 = 0;
-let score2 = 0;
 let dataLoaded = false;
 
 function esc(s) {
@@ -155,7 +152,8 @@ async function refreshData() {
 function renderPanel(panelId) {
     switch (panelId) {
         case 'jugadores': renderJugadores(); break;
-        case 'eliminatoria': renderEliminatoria(); break;
+        case 'draw': renderDraw(); break;
+        case 'resultados': renderResultados(); break;
         case 'cuartos-admin': renderCuartosAdmin(); break;
         case 'semis-admin': renderSemisAdmin(); break;
         case 'final-admin': renderFinalAdmin(); break;
@@ -202,7 +200,7 @@ function renderJugadores() {
         const open = document.getElementById('j-form-body').style.display !== 'none';
         toggleJugadorForm(!open);
     });
-    document.getElementById('btn-add-jugador').addEventListener('click', addJugador);
+    document.getElementById('btn-add-jugador').onclick = addJugador;
     document.getElementById('jugador-search').addEventListener('input', (e) => {
         jugadorSearchTerm = e.target.value;
         renderJugadoresList();
@@ -481,162 +479,141 @@ async function confirmCSVImport(nuevos) {
 }
 
 // ═══════════════════════════════════════════
-// ELIMINATORIA (+/- SCORE)
+// DRAW (parejas sin score)
 // ═══════════════════════════════════════════
-function renderEliminatoria() {
-    const panel = document.getElementById('panel-eliminatoria');
+let editingDrawId = null;
+
+function renderDraw() {
+    const panel = document.getElementById('panel-draw');
     const activos = allJugadores.filter(j => j.pago_recibido);
     const opts = activos.map(j => '<option value="' + j.id + '">' + esc(j.nombre) + ' ' + esc(j.apellidos) + '</option>').join('');
 
-    if (editingPartidoId) {
-        const p = allPartidos.find(x => x.id === editingPartidoId);
-        if (p) { score1 = p.games1 || 0; score2 = p.games2 || 0; }
-    } else {
-        score1 = 0;
-        score2 = 0;
-    }
+    const isEditing = !!editingDrawId;
+    const ep = isEditing ? allPartidos.find(x => x.id === editingDrawId) : null;
 
     panel.innerHTML =
+        '<div class="card">' +
+        '<button class="collapse-toggle" id="d-toggle-form" type="button" aria-expanded="' + (isEditing ? 'true' : 'false') + '">' +
+        '<span class="collapse-toggle-left"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">sports_tennis</span> ' + (isEditing ? 'Editar Partido' : 'Nuevo Partido') + '</span>' +
+        '<span class="material-symbols-outlined chevron">' + (isEditing ? 'expand_less' : 'expand_more') + '</span>' +
+        '</button>' +
+        '<div id="d-form-body" style="display:' + (isEditing ? 'block' : 'none') + ';">' +
         '<div class="match-form">' +
-        '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">sports_tennis</span> ' + (editingPartidoId ? 'Editar Partido' : 'Nuevo Partido') + '</h3>' +
         '<div class="pair-label team-a"><span class="material-symbols-outlined" style="font-size:0.8rem;">circle</span> Pareja 1</div>' +
         '<div class="pair-row">' +
-        '<select id="el-p1a"><option value="">— Jugador A —</option>' + opts + '</select>' +
-        '<select id="el-p1b"><option value="">— Jugador B —</option>' + opts + '</select>' +
+        '<select id="d-p1a"><option value="">— Jugador A —</option>' + opts + '</select>' +
+        '<select id="d-p1b"><option value="">— Jugador B —</option>' + opts + '</select>' +
         '</div>' +
         '<div class="pair-label team-b"><span class="material-symbols-outlined" style="font-size:0.8rem;">circle</span> Pareja 2</div>' +
         '<div class="pair-row">' +
-        '<select id="el-p2c"><option value="">— Jugador C —</option>' + opts + '</select>' +
-        '<select id="el-p2d"><option value="">— Jugador D —</option>' + opts + '</select>' +
+        '<select id="d-p2c"><option value="">— Jugador C —</option>' + opts + '</select>' +
+        '<select id="d-p2d"><option value="">— Jugador D —</option>' + opts + '</select>' +
         '</div>' +
-        '<div class="score-display-card">' +
-        '<div class="score-row">' +
-        '<span class="team-dot blue"></span>' +
-        '<span class="team-name blue">Pareja 1</span>' +
-        '<div class="score-control">' +
-        '<button class="score-btn team-blue" onclick="changeScore(1,-1)">−</button>' +
-        '<span class="score-value blue" id="sv1">' + score1 + '</span>' +
-        '<button class="score-btn team-blue" onclick="changeScore(1,1)">+</button>' +
+        '<div class="btn-group-spaced" style="margin-top:0.75rem;">' +
+        '<button class="btn btn-primary" id="btn-save-draw"><span class="material-symbols-outlined" style="font-size:1rem;">' + (isEditing ? 'save' : 'add') + '</span> ' + (isEditing ? 'Actualizar' : 'Crear Parejas') + '</button>' +
+        (isEditing ? '<button class="btn btn-outline" id="btn-cancel-draw"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' : '') +
         '</div>' +
         '</div>' +
-        '<div class="score-row">' +
-        '<span class="team-dot gold"></span>' +
-        '<span class="team-name gold">Pareja 2</span>' +
-        '<div class="score-control">' +
-        '<button class="score-btn team-gold" onclick="changeScore(2,-1)">−</button>' +
-        '<span class="score-value gold" id="sv2">' + score2 + '</span>' +
-        '<button class="score-btn team-gold" onclick="changeScore(2,1)">+</button>' +
         '</div>' +
         '</div>' +
-        '<div class="score-label"><span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + score1 + '-' + score2 + '</div>' +
-        '</div>' +
-        '<div class="btn-group-spaced">' +
-        '<button class="btn btn-primary" id="btn-save-partido"><span class="material-symbols-outlined" style="font-size:1rem;">save</span> ' + (editingPartidoId ? 'Actualizar' : 'Registrar Partido') + '</button>' +
-        (editingPartidoId ? '<button class="btn btn-outline" id="btn-cancel-edit"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' : '') +
-        '</div>' +
-        '</div>' +
-        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">history</span> Partidos Registrados (' + allPartidos.length + ')</div>' +
-        (allPartidos.length ? '' : '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">sports_tennis</span><p>No hay partidos registrados</p></div>') +
+        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">sports_tennis</span> Partidos DRAW (' + allPartidos.length + ')</div>' +
+        (!allPartidos.length ? '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">sports_tennis</span><p>No hay partidos en el DRAW</p></div>' : '') +
         allPartidos.map(p =>
             '<div class="match-item">' +
             '<div class="match-info">' +
             '<div class="match-teams"><span class="material-symbols-outlined" style="font-size:0.85rem;color:var(--primary);">sports_tennis</span> ' + esc(p.pareja1_nombre || '') + ' <span style="color:var(--on-surface-variant-30)">vs</span> ' + esc(p.pareja2_nombre || '') + '</div>' +
-            '<div class="match-meta"><span class="match-score">' + esc(p.score || '—') + '</span> · ' + (p.fecha ? new Date(p.fecha.toDate ? p.fecha.toDate() : p.fecha).toLocaleDateString('es-AR') : '') + '</div>' +
+            '<div class="match-meta">' + (p.score ? '<span class="match-score">' + esc(p.score) + '</span> · ' : '') + (p.fecha ? new Date(p.fecha.toDate ? p.fecha.toDate() : p.fecha).toLocaleDateString('es-AR') : '') + '</div>' +
             '</div>' +
             '<div class="btn-group">' +
-            '<button class="btn btn-sm btn-outline" data-edit-partido="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">edit</span></button>' +
-            '<button class="btn btn-sm btn-danger" data-del-partido="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
+            '<button class="btn btn-sm btn-outline" data-edit-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">edit</span></button>' +
+            '<button class="btn btn-sm btn-danger" data-del-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
             '</div>' +
             '</div>'
         ).join('');
 
-    if (editingPartidoId) {
+    if (isEditing && ep) {
         setTimeout(() => {
-            const p = allPartidos.find(x => x.id === editingPartidoId);
-            if (p) {
-                document.getElementById('el-p1a').value = p.p1a_id || '';
-                document.getElementById('el-p1b').value = p.p1b_id || '';
-                document.getElementById('el-p2c').value = p.p2c_id || '';
-                document.getElementById('el-p2d').value = p.p2d_id || '';
-            }
+            document.getElementById('d-p1a').value = ep.p1a_id || '';
+            document.getElementById('d-p1b').value = ep.p1b_id || '';
+            document.getElementById('d-p2c').value = ep.p2c_id || '';
+            document.getElementById('d-p2d').value = ep.p2d_id || '';
         }, 50);
     }
 
-    document.getElementById('btn-save-partido').addEventListener('click', savePartido);
-    if (editingPartidoId) {
-        document.getElementById('btn-cancel-edit').addEventListener('click', () => { editingPartidoId = null; renderEliminatoria(); });
+    document.getElementById('d-toggle-form').addEventListener('click', () => {
+        const open = document.getElementById('d-form-body').style.display !== 'none';
+        toggleDrawForm(!open);
+    });
+    document.getElementById('btn-save-draw').addEventListener('click', saveDrawPartido);
+    if (isEditing) {
+        document.getElementById('btn-cancel-draw').addEventListener('click', () => { editingDrawId = null; renderDraw(); });
     }
-    panel.querySelectorAll('[data-edit-partido]').forEach(b => b.addEventListener('click', () => startEditPartido(b.dataset.editPartido)));
-    panel.querySelectorAll('[data-del-partido]').forEach(b => b.addEventListener('click', () => deletePartido(b.dataset.delPartido)));
+    panel.querySelectorAll('[data-edit-draw]').forEach(b => b.addEventListener('click', () => { editingDrawId = b.dataset.editDraw; renderDraw(); }));
+    panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delDraw)));
 }
 
-window.changeScore = function(team, delta) {
-    if (team === 1) { score1 = Math.max(0, score1 + delta); document.getElementById('sv1').textContent = score1; }
-    else { score2 = Math.max(0, score2 + delta); document.getElementById('sv2').textContent = score2; }
-    document.querySelector('.score-label').innerHTML = '<span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + score1 + '-' + score2;
-};
+function toggleDrawForm(open) {
+    const body = document.getElementById('d-form-body');
+    const btn = document.getElementById('d-toggle-form');
+    if (!body || !btn) return;
+    body.style.display = open ? 'block' : 'none';
+    btn.classList.toggle('open', open);
+    btn.querySelector('.chevron').textContent = open ? 'expand_less' : 'expand_more';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 
-async function savePartido() {
-    const p1a = document.getElementById('el-p1a').value;
-    const p1b = document.getElementById('el-p1b').value;
-    const p2c = document.getElementById('el-p2c').value;
-    const p2d = document.getElementById('el-p2d').value;
+async function saveDrawPartido() {
+    const p1a = document.getElementById('d-p1a').value;
+    const p1b = document.getElementById('d-p1b').value;
+    const p2c = document.getElementById('d-p2c').value;
+    const p2d = document.getElementById('d-p2d').value;
     if (!p1a || !p1b || !p2c || !p2d) { toast('Seleccioná los 4 jugadores', 'error'); return; }
-    if (score1 === 0 && score2 === 0) { toast('Ingresá el score', 'error'); return; }
-    const scoreStr = score1 + '-' + score2;
     const pareja1_nombre = getPlayerName(p1a) + ' + ' + getPlayerName(p1b);
     const pareja2_nombre = getPlayerName(p2c) + ' + ' + getPlayerName(p2d);
-    const batch = writeBatch(db);
 
-    if (editingPartidoId) {
-        const old = allPartidos.find(p => p.id === editingPartidoId);
+    if (editingDrawId) {
+        const old = allPartidos.find(p => p.id === editingDrawId);
+        const batch = writeBatch(db);
         if (old && old.games1 !== undefined) {
             batch.update(doc(db, 'jugadores', old.p1a_id), { JG: increment(-old.games1) });
             batch.update(doc(db, 'jugadores', old.p1b_id), { JG: increment(-old.games1) });
             batch.update(doc(db, 'jugadores', old.p2c_id), { JG: increment(-old.games2) });
             batch.update(doc(db, 'jugadores', old.p2d_id), { JG: increment(-old.games2) });
         }
-        batch.update(doc(db, 'partidos_eliminatoria', editingPartidoId), {
+        batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
-            pareja1_nombre, pareja2_nombre, score: scoreStr, games1: score1, games2: score2, fecha: new Date()
+            pareja1_nombre, pareja2_nombre, fecha: new Date()
         });
+        showLoading('Actualizando partido...');
+        try {
+            await batch.commit();
+            editingDrawId = null;
+            toast('Partido actualizado', 'success');
+            await refreshData();
+        } catch (e) {
+            toast('Error al actualizar', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
     } else {
         const ref = doc(collection(db, 'partidos_eliminatoria'));
-        batch.set(ref, {
+        await addDoc(collection(db, 'partidos_eliminatoria'), {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
-            pareja1_nombre, pareja2_nombre, score: scoreStr, games1: score1, games2: score2, fecha: new Date()
+            pareja1_nombre, pareja2_nombre, score: '', games1: null, games2: null, fecha: new Date()
         });
-    }
-
-    batch.update(doc(db, 'jugadores', p1a), { JG: increment(score1), JJ: increment(editingPartidoId ? 0 : 1) });
-    batch.update(doc(db, 'jugadores', p1b), { JG: increment(score1), JJ: increment(editingPartidoId ? 0 : 1) });
-    batch.update(doc(db, 'jugadores', p2c), { JG: increment(score2), JJ: increment(editingPartidoId ? 0 : 1) });
-    batch.update(doc(db, 'jugadores', p2d), { JG: increment(score2), JJ: increment(editingPartidoId ? 0 : 1) });
-
-    showLoading(editingPartidoId ? 'Actualizando partido...' : 'Registrando partido...');
-    try {
-        await batch.commit();
-        const wasEditing = !!editingPartidoId;
-        editingPartidoId = null;
-        toast(wasEditing ? 'Partido actualizado' : 'Partido registrado', 'success');
+        toast('Parejas creadas en el DRAW', 'success');
         await refreshData();
-    } catch (e) {
-        toast('Error al guardar partido', 'error');
-        console.error(e);
-    } finally {
-        hideLoading();
     }
 }
 
-function startEditPartido(id) {
-    editingPartidoId = id;
-    renderEliminatoria();
-}
-
-async function deletePartido(id) {
-    if (!confirm('¿Eliminar este partido? Se descontarán JJ y JG.')) return;
+async function deleteDrawPartido(id) {
     const p = allPartidos.find(x => x.id === id);
     if (!p) return;
+    const msg = (p.score && p.games1 !== null)
+        ? '⚠️ Este partido tiene score registrado. Se eliminará completamente del DRAW y de Resultados. Se descontarán JJ y JG de los jugadores. ¿Querés crearlo de nuevo en el DRAW para que aparezca en Resultados. ¿Confirmar eliminación?'
+        : '¿Eliminar este partido del DRAW?';
+    if (!confirm(msg)) return;
     showLoading('Eliminando partido...');
     try {
         const batch = writeBatch(db);
@@ -646,10 +623,128 @@ async function deletePartido(id) {
         if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
         batch.delete(doc(db, 'partidos_eliminatoria', id));
         await batch.commit();
+        if (editingDrawId === id) editingDrawId = null;
         toast('Partido eliminado', 'success');
         await refreshData();
     } catch (e) {
-        toast('Error al eliminar partido', 'error');
+        toast('Error al eliminar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
+}
+
+// ═══════════════════════════════════════════
+// RESULTADOS (score inline por partido)
+// ═══════════════════════════════════════════
+let resultScores = {};
+
+function renderResultados() {
+    const panel = document.getElementById('panel-resultados');
+
+    if (!allPartidos.length) {
+        panel.innerHTML = '<div class="empty-state" style="padding:2rem;"><span class="material-symbols-outlined">sports_tennis</span><p>No hay partidos en el DRAW. Creá las parejas primero en la pestaña DRAW.</p></div>';
+        return;
+    }
+
+    resultScores = {};
+    allPartidos.forEach(p => {
+        resultScores[p.id] = { s1: p.games1 || 0, s2: p.games2 || 0 };
+    });
+
+    panel.innerHTML =
+        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">sports_score</span> Resultados Eliminatoria (' + allPartidos.length + ')</div>' +
+        allPartidos.map(p => {
+            const rs = resultScores[p.id];
+            const hasScore = p.score && p.games1 !== null;
+            return '<div class="card">' +
+                '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
+                '<div style="flex:1;">' +
+                '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(p.pareja1_nombre || '') + '</div>' +
+                '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.15rem;">vs</div>' +
+                '<div style="font-size:0.82rem;color:var(--secondary);">' + esc(p.pareja2_nombre || '') + '</div>' +
+                '</div>' +
+                '<button class="btn btn-sm btn-danger" data-del-result="' + p.id + '" style="align-self:flex-start;"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
+                '</div>' +
+                '<div class="score-display-card">' +
+                '<div class="score-row">' +
+                '<span class="team-dot blue"></span>' +
+                '<span class="team-name blue">Pareja 1</span>' +
+                '<div class="score-control">' +
+                '<button class="score-btn team-blue" data-rs-id="' + p.id + '" data-team="1" data-delta="-1">−</button>' +
+                '<span class="score-value blue" id="rs1-' + p.id + '">' + rs.s1 + '</span>' +
+                '<button class="score-btn team-blue" data-rs-id="' + p.id + '" data-team="1" data-delta="1">+</button>' +
+                '</div>' +
+                '</div>' +
+                '<div class="score-row">' +
+                '<span class="team-dot gold"></span>' +
+                '<span class="team-name gold">Pareja 2</span>' +
+                '<div class="score-control">' +
+                '<button class="score-btn team-gold" data-rs-id="' + p.id + '" data-team="2" data-delta="-1">−</button>' +
+                '<span class="score-value gold" id="rs2-' + p.id + '">' + rs.s2 + '</span>' +
+                '<button class="score-btn team-gold" data-rs-id="' + p.id + '" data-team="2" data-delta="1">+</button>' +
+                '</div>' +
+                '</div>' +
+                '<div class="score-label" id="rs-label-' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + rs.s1 + '-' + rs.s2 + '</div>' +
+                '</div>' +
+                '<div class="btn-group-spaced">' +
+                '<button class="btn btn-primary btn-sm" data-save-result="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">' + (hasScore ? 'update' : 'save') + '</span> ' + (hasScore ? 'Actualizar Resultado' : 'Registrar Resultado') + '</button>' +
+                '</div>' +
+                '</div>';
+        }).join('');
+
+    panel.querySelectorAll('[data-rs-id]').forEach(b => {
+        b.addEventListener('click', () => {
+            const id = b.dataset.rsId;
+            const team = parseInt(b.dataset.team);
+            const delta = parseInt(b.dataset.delta);
+            const rs = resultScores[id];
+            if (!rs) return;
+            if (team === 1) rs.s1 = Math.max(0, rs.s1 + delta);
+            else rs.s2 = Math.max(0, rs.s2 + delta);
+            document.getElementById('rs1-' + id).textContent = rs.s1;
+            document.getElementById('rs2-' + id).textContent = rs.s2;
+            document.getElementById('rs-label-' + id).innerHTML = '<span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + rs.s1 + '-' + rs.s2;
+        });
+    });
+
+    panel.querySelectorAll('[data-save-result]').forEach(b => b.addEventListener('click', () => saveResultado(b.dataset.saveResult)));
+    panel.querySelectorAll('[data-del-result]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delResult)));
+}
+
+async function saveResultado(id) {
+    const rs = resultScores[id];
+    if (!rs) return;
+    if (rs.s1 === 0 && rs.s2 === 0) { toast('Ingresá un score válido', 'error'); return; }
+    const scoreStr = rs.s1 + '-' + rs.s2;
+    const p = allPartidos.find(x => x.id === id);
+    const batch = writeBatch(db);
+
+    if (p && p.games1 !== null) {
+        batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(-p.games1) });
+        batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(-p.games1) });
+        batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(-p.games2) });
+        batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-p.games2) });
+    }
+
+    if (p && p.games1 === null) {
+        batch.update(doc(db, 'jugadores', p.p1a_id), { JJ: increment(1) });
+        batch.update(doc(db, 'jugadores', p.p1b_id), { JJ: increment(1) });
+        batch.update(doc(db, 'jugadores', p.p2c_id), { JJ: increment(1) });
+        batch.update(doc(db, 'jugadores', p.p2d_id), { JJ: increment(1) });
+    }
+
+    batch.update(doc(db, 'partidos_eliminatoria', id), {
+        score: scoreStr, games1: rs.s1, games2: rs.s2, fecha: new Date()
+    });
+
+    showLoading('Guardando resultado...');
+    try {
+        await batch.commit();
+        toast('Resultado guardado', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al guardar resultado', 'error');
         console.error(e);
     } finally {
         hideLoading();
