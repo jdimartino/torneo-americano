@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="css/styles.css?v=8">
+    <link rel="stylesheet" href="css/styles.css?v=9">
 </head>
 <body>
 
@@ -33,19 +33,19 @@
     </div>
     <div class="header-line"></div>
     <nav class="tab-nav">
-        <button data-tab="posiciones" class="active">
+        <button data-tab="posiciones" class="active" onclick="showTab('posiciones')">
             <span class="material-symbols-outlined" style="font-size:1rem;">leaderboard</span> Posiciones
         </button>
-        <button data-tab="resultados">
+        <button data-tab="resultados" onclick="showTab('resultados')">
             <span class="material-symbols-outlined" style="font-size:1rem;">history</span> Resultados
         </button>
-        <button data-tab="cuartos">
+        <button data-tab="cuartos" onclick="showTab('cuartos')">
             <span class="material-symbols-outlined" style="font-size:1rem;">emoji_events</span> Cuartos
         </button>
-        <button data-tab="semifinales">
+        <button data-tab="semifinales" onclick="showTab('semifinales')">
             <span class="material-symbols-outlined" style="font-size:1rem;">military_tech</span> Semis
         </button>
-        <button data-tab="finales">
+        <button data-tab="finales" onclick="showTab('finales')">
             <span class="material-symbols-outlined" style="font-size:1rem;">workspace_premium</span> Final
         </button>
     </nav>
@@ -59,7 +59,7 @@
     <section id="finales" class="tab-content"></section>
 </main>
 
-<script type="module" src="js/app.js?v=8"></script>
+<script type="module" src="js/app.js?v=9"></script>
 
 </body>
 </html>

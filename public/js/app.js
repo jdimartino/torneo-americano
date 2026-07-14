@@ -1,4 +1,4 @@
-import { getDocs, collection, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { db } from './firebase.js';
 
 let allJugadores = [];
@@ -30,21 +30,25 @@ function rankBadge(pos) {
 // ── Load All Data ──
 async function loadAllData() {
     try {
-        const [jugSnap, partSnap, cuartosSnap, semisSnap, finalesSnap] = await Promise.all([
-            getDocs(query(collection(db, 'jugadores'), orderBy('JG', 'desc'))),
-            getDocs(query(collection(db, 'partidos_eliminatoria'), orderBy('fecha', 'desc'))),
-            getDocs(query(collection(db, 'cuartos'), orderBy('grupo'))),
-            getDocs(query(collection(db, 'semifinales'), orderBy('cruce'))),
-            getDocs(collection(db, 'final'))
-        ]);
+        const jugSnap = await getDocs(collection(db, 'jugadores'));
         allJugadores = jugSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.error('Error loading jugadores:', e); }
+    try {
+        const partSnap = await getDocs(collection(db, 'partidos_eliminatoria'));
         allPartidos = partSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.error('Error loading partidos:', e); }
+    try {
+        const cuartosSnap = await getDocs(collection(db, 'cuartos'));
         allCuartos = cuartosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.error('Error loading cuartos:', e); }
+    try {
+        const semisSnap = await getDocs(collection(db, 'semifinales'));
         allSemis = semisSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) { console.error('Error loading semifinales:', e); }
+    try {
+        const finalesSnap = await getDocs(collection(db, 'final'));
         allFinales = finalesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-        console.error('Error loading data:', e);
-    }
+    } catch (e) { console.error('Error loading final:', e); }
 }
 
 // ── Posiciones ──
