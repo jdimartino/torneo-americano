@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="css/styles.css?v=11">
+    <link rel="stylesheet" href="css/styles.css?v=12">
 </head>
 <body class="admin-body">
 
@@ -63,8 +63,11 @@
                     <button class="admin-tab-btn active" data-panel="jugadores" onclick="showPanel('jugadores')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">groups</span> Jugadores
                     </button>
-                    <button class="admin-tab-btn" data-panel="eliminatoria" onclick="showPanel('eliminatoria')">
-                        <span class="material-symbols-outlined" style="font-size:1rem;">sports_tennis</span> Eliminatoria
+                    <button class="admin-tab-btn" data-panel="draw" onclick="showPanel('draw')">
+                        <span class="material-symbols-outlined" style="font-size:1rem;">sports_tennis</span> DRAW
+                    </button>
+                    <button class="admin-tab-btn" data-panel="resultados" onclick="showPanel('resultados')">
+                        <span class="material-symbols-outlined" style="font-size:1rem;">sports_score</span> Resultados
                     </button>
                     <button class="admin-tab-btn" data-panel="cuartos-admin" onclick="showPanel('cuartos-admin')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">emoji_events</span> Cuartos
@@ -79,14 +82,15 @@
             </header>
 
             <div id="panel-jugadores" class="admin-panel active"></div>
-            <div id="panel-eliminatoria" class="admin-panel"></div>
+            <div id="panel-draw" class="admin-panel"></div>
+            <div id="panel-resultados" class="admin-panel"></div>
             <div id="panel-cuartos-admin" class="admin-panel"></div>
             <div id="panel-semis-admin" class="admin-panel"></div>
             <div id="panel-final-admin" class="admin-panel"></div>
         </div>
     </main>
 
-    <script type="module" src="js/admin.js?v=11"></script>
+    <script type="module" src="js/admin.js?v=12"></script>
 
 </body>
 </html>

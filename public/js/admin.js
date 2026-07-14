@@ -189,6 +189,12 @@ function renderJugadores() {
         '</div>' +
         '</div>' +
         '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos</div>' +
+        '<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">' +
+        '<input type="file" id="csv-file-input" accept=".csv" style="display:none;">' +
+        '<button class="btn btn-outline" id="btn-import-csv"><span class="material-symbols-outlined" style="font-size:1rem;">upload_file</span> Importar CSV</button>' +
+        '<span id="csv-file-name" style="font-size:0.75rem;color:var(--on-surface-variant-30);"></span>' +
+        '</div>' +
+        '<div id="csv-preview" style="display:none;"></div>' +
         '<div class="search-bar"><span class="material-symbols-outlined search-icon">search</span><input type="text" id="jugador-search" placeholder="Buscar por nombre, categoría, email..." value="' + esc(jugadorSearchTerm) + '"></div>' +
         '<div id="jugadores-list"></div>';
 
@@ -201,6 +207,10 @@ function renderJugadores() {
         jugadorSearchTerm = e.target.value;
         renderJugadoresList();
     });
+    document.getElementById('btn-import-csv').addEventListener('click', () => {
+        document.getElementById('csv-file-input').click();
+    });
+    document.getElementById('csv-file-input').addEventListener('change', handleCSVFile);
     renderJugadoresList();
 }
 
@@ -335,6 +345,135 @@ async function deleteJugador(id) {
         await refreshData();
     } catch (e) {
         toast('Error al eliminar', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
+}
+
+// ═══════════════════════════════════════════
+// CSV IMPORT
+// ═══════════════════════════════════════════
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+        else { current += ch; }
+    }
+    result.push(current.trim());
+    return result;
+}
+
+function handleCSVFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const nameEl = document.getElementById('csv-file-name');
+    if (nameEl) nameEl.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+        const text = evt.target.result;
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) { toast('El CSV está vacío', 'error'); return; }
+        const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase());
+        const colMap = {
+            nombre: headers.findIndex(h => h.includes('nombre')),
+            apellidos: headers.findIndex(h => h.includes('apellido')),
+            numero_accion: headers.findIndex(h => h.includes('socio') || h.includes('accion')),
+            categoria: headers.findIndex(h => h.includes('categ')),
+            telefono: headers.findIndex(h => h.includes('telefono') || h.includes('teléfono')),
+            email: headers.findIndex(h => h.includes('correo') || h.includes('email'))
+        };
+        if (colMap.nombre === -1 || colMap.email === -1) {
+            toast('El CSV no tiene las columnas esperadas (Nombres, Correo)', 'error'); return;
+        }
+        const existingEmails = new Set(allJugadores.map(j => (j.email || '').toLowerCase().trim()));
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            const email = (cols[colMap.email] || '').toLowerCase().trim();
+            if (!email) continue;
+            rows.push({
+                nombre: (cols[colMap.nombre] || '').trim(),
+                apellidos: (colMap.apellidos !== -1 ? (cols[colMap.apellidos] || '') : '').trim(),
+                numero_accion: (colMap.numero_accion !== -1 ? (cols[colMap.numero_accion] || '') : '').trim(),
+                categoria: (colMap.categoria !== -1 ? (cols[colMap.categoria] || '') : '').trim(),
+                telefono: (colMap.telefono !== -1 ? (cols[colMap.telefono] || '') : '').trim(),
+                email: email,
+                _exists: existingEmails.has(email)
+            });
+        }
+        const nuevos = rows.filter(r => !r._exists);
+        const existentes = rows.filter(r => r._exists);
+        showCSVPreview(rows, nuevos, existentes);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+}
+
+function showCSVPreview(all, nuevos, existentes) {
+    const el = document.getElementById('csv-preview');
+    if (!el) return;
+    el.style.display = 'block';
+    el.innerHTML =
+        '<div class="card">' +
+        '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">upload_file</span> Preview Importación CSV</h3>' +
+        '<div style="display:flex;gap:1rem;margin-bottom:0.75rem;flex-wrap:wrap;">' +
+        '<span class="badge badge-success"><span class="material-symbols-outlined" style="font-size:0.6rem;">add_circle</span> ' + nuevos.length + ' nuevos</span>' +
+        '<span class="badge"><span class="material-symbols-outlined" style="font-size:0.6rem;">check_circle</span> ' + existentes.length + ' ya existen</span>' +
+        '</div>' +
+        (nuevos.length ? '<div style="max-height:200px;overflow-y:auto;margin-bottom:0.75rem;">' +
+            nuevos.map(j =>
+                '<div style="font-size:0.8rem;padding:0.3rem 0;border-bottom:1px solid var(--white-5);color:var(--text);">' +
+                esc(j.nombre) + ' ' + esc(j.apellidos) + ' — <span style="color:var(--on-surface-variant-30);">' + esc(j.email) + '</span>' +
+                '</div>'
+            ).join('') + '</div>' : '') +
+        (existentes.length ? '<details style="margin-bottom:0.75rem;"><summary style="font-size:0.8rem;color:var(--on-surface-variant-30);cursor:pointer;">Ver ' + existentes.length + ' existentes</summary><div style="max-height:150px;overflow-y:auto;">' +
+            existentes.map(j =>
+                '<div style="font-size:0.75rem;padding:0.25rem 0;color:var(--on-surface-variant-30);">' +
+                esc(j.nombre) + ' ' + esc(j.apellidos) + ' — ' + esc(j.email) +
+                '</div>'
+            ).join('') + '</details></details>' : '') +
+        '<div class="btn-group-spaced">' +
+        (nuevos.length ? '<button class="btn btn-primary" id="btn-confirm-import"><span class="material-symbols-outlined" style="font-size:1rem;">file_upload</span> Importar ' + nuevos.length + ' nuevos</button>' : '') +
+        '<button class="btn btn-outline" id="btn-cancel-import"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' +
+        '</div>' +
+        '</div>';
+
+    if (nuevos.length) {
+        document.getElementById('btn-confirm-import').addEventListener('click', () => confirmCSVImport(nuevos));
+    }
+    document.getElementById('btn-cancel-import').addEventListener('click', () => { el.style.display = 'none'; el.innerHTML = ''; });
+}
+
+async function confirmCSVImport(nuevos) {
+    showLoading('Importando ' + nuevos.length + ' jugadores...');
+    try {
+        const batch = writeBatch(db);
+        nuevos.forEach(j => {
+            const ref = doc(collection(db, 'jugadores'));
+            batch.set(ref, {
+                nombre: j.nombre,
+                apellidos: j.apellidos,
+                categoria: j.categoria,
+                telefono: j.telefono,
+                email: j.email,
+                numero_accion: j.numero_accion,
+                pago_recibido: false,
+                JJ: 0, JG: 0
+            });
+        });
+        await batch.commit();
+        toast(nuevos.length + ' jugadores importados', 'success');
+        document.getElementById('csv-preview').style.display = 'none';
+        document.getElementById('csv-preview').innerHTML = '';
+        document.getElementById('csv-file-name').textContent = '';
+        await refreshData();
+    } catch (e) {
+        toast('Error al importar', 'error');
         console.error(e);
     } finally {
         hideLoading();
