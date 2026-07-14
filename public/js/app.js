@@ -62,7 +62,11 @@ function renderPosiciones() {
         '<table>' +
         '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">JG</th></tr></thead>' +
         '<tbody>' +
-        allJugadores.map((j, i) =>
+        [...allJugadores].sort((a, b) => {
+            const diff = (b.JG || 0) - (a.JG || 0);
+            if (diff !== 0) return diff;
+            return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
+        }).map((j, i) =>
             '<tr>' +
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
             '<td>' + esc(j.nombre || '') + ' ' + esc(j.apellidos || '') + '</td>' +
