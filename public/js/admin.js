@@ -254,7 +254,7 @@ function renderJugadoresList() {
             '</div>' +
             '<div class="player-stats">' +
             '<span class="material-symbols-outlined" style="font-size:0.7rem;">sports_tennis</span> JJ: ' + (j.JJ || 0) +
-            ' · JG: ' + (j.JG || 0) +
+            ' · GG: ' + (j.GG || 0) +
             ' · <span class="material-symbols-outlined" style="font-size:0.7rem;">confirmation_number</span> ' + (j.numero_accion || '—') +
             '</div>' +
             '</div>' +
@@ -279,7 +279,7 @@ async function addJugador() {
         email: document.getElementById('j-email').value.trim(),
         numero_accion: document.getElementById('j-accion').value.trim(),
         pago_recibido: document.getElementById('j-pago').checked,
-        JJ: 0, JG: 0
+        JJ: 0, GG: 0
     };
     if (!data.nombre || !data.apellidos) { toast('Nombre y apellidos requeridos', 'error'); return; }
     showLoading('Agregando jugador...');
@@ -461,7 +461,7 @@ async function confirmCSVImport(nuevos) {
                 email: j.email,
                 numero_accion: j.numero_accion,
                 pago_recibido: false,
-                JJ: 0, JG: 0
+                JJ: 0, GG: 0
             });
         });
         await batch.commit();
@@ -615,10 +615,10 @@ async function saveDrawPartido() {
         const old = allPartidos.find(p => p.id === editingDrawId);
         const batch = writeBatch(db);
         if (old && old.games1 !== null) {
-            batch.update(doc(db, 'jugadores', old.p1a_id), { JG: increment(-old.games1) });
-            batch.update(doc(db, 'jugadores', old.p1b_id), { JG: increment(-old.games1) });
-            batch.update(doc(db, 'jugadores', old.p2c_id), { JG: increment(-old.games2) });
-            batch.update(doc(db, 'jugadores', old.p2d_id), { JG: increment(-old.games2) });
+            batch.update(doc(db, 'jugadores', old.p1a_id), { GG: increment(-old.games1) });
+            batch.update(doc(db, 'jugadores', old.p1b_id), { GG: increment(-old.games1) });
+            batch.update(doc(db, 'jugadores', old.p2c_id), { GG: increment(-old.games2) });
+            batch.update(doc(db, 'jugadores', old.p2d_id), { GG: increment(-old.games2) });
         }
         const hasScore = document.getElementById('ds1');
         const g1 = hasScore ? drawScore1 : null;
@@ -655,16 +655,16 @@ async function deleteDrawPartido(id) {
     const p = allPartidos.find(x => x.id === id);
     if (!p) return;
     const msg = (p.score && p.games1 !== null)
-        ? '⚠️ Este partido tiene score registrado. Se eliminará completamente del DRAW y de Resultados. Se descontarán JJ y JG de los jugadores. ¿Querés crearlo de nuevo en el DRAW para que aparezca en Resultados. ¿Confirmar eliminación?'
+        ? '⚠️ Este partido tiene score registrado. Se eliminará completamente del DRAW y de Resultados. Se descontarán JJ y GG de los jugadores. ¿Querés crearlo de nuevo en el DRAW para que aparezca en Resultados. ¿Confirmar eliminación?'
         : '¿Eliminar este partido del DRAW?';
     if (!confirm(msg)) return;
     showLoading('Eliminando partido...');
     try {
         const batch = writeBatch(db);
-        if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-        if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-        if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
-        if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+        if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+        if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
         batch.delete(doc(db, 'partidos_eliminatoria', id));
         await batch.commit();
         if (editingDrawId === id) editingDrawId = null;
@@ -765,10 +765,10 @@ async function saveResultado(id) {
     const batch = writeBatch(db);
 
     if (p && p.games1 !== null) {
-        batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(-p.games1) });
-        batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(-p.games1) });
-        batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(-p.games2) });
-        batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(-p.games2) });
+        batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-p.games1) });
+        batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-p.games1) });
+        batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-p.games2) });
+        batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-p.games2) });
     }
 
     if (p && p.games1 === null) {
@@ -778,10 +778,10 @@ async function saveResultado(id) {
         batch.update(doc(db, 'jugadores', p.p2d_id), { JJ: increment(1) });
     }
 
-    batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(rs.s1) });
-    batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(rs.s1) });
-    batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(rs.s2) });
-    batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(rs.s2) });
+    batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(rs.s1) });
+    batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(rs.s1) });
+    batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(rs.s2) });
+    batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(rs.s2) });
 
     batch.update(doc(db, 'partidos_eliminatoria', id), {
         score: scoreStr, games1: rs.s1, games2: rs.s2, fecha: new Date()
@@ -809,7 +809,7 @@ function renderCuartosAdmin() {
         panel.innerHTML =
             '<div class="card">' +
             '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">emoji_events</span> Generar Cuartos de Final</h3>' +
-            '<p style="font-size:0.82rem;color:var(--on-surface-variant-60);margin-bottom:0.75rem;">Empareja a los 16 mejores jugadores según JG.</p>' +
+            '<p style="font-size:0.82rem;color:var(--on-surface-variant-60);margin-bottom:0.75rem;">Empareja a los 16 mejores jugadores según GG.</p>' +
             '<button class="btn btn-primary btn-block" id="btn-generar-cuartos"><span class="material-symbols-outlined" style="font-size:1rem;">auto_awesome</span> Generar Cuartos</button>' +
             '</div>';
         document.getElementById('btn-generar-cuartos').addEventListener('click', generarCuartos);
@@ -855,7 +855,7 @@ function renderCuartosAdmin() {
 async function generarCuartos() {
     showLoading('Generando cuartos...');
     try {
-        const sorted = [...allJugadores].sort((a, b) => (b.JG || 0) - (a.JG || 0));
+        const sorted = [...allJugadores].sort((a, b) => (b.GG || 0) - (a.GG || 0));
         if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); hideLoading(); return; }
         const top16 = sorted.slice(0, 16);
         const grupos = [

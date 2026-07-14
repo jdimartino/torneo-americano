@@ -60,10 +60,10 @@ function renderPosiciones() {
     }
     el.innerHTML =
         '<table>' +
-        '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">JG</th></tr></thead>' +
+        '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
         '<tbody>' +
         [...allJugadores].sort((a, b) => {
-            const diff = (b.JG || 0) - (a.JG || 0);
+            const diff = (b.GG || 0) - (a.GG || 0);
             if (diff !== 0) return diff;
             return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
         }).map((j, i) =>
@@ -71,7 +71,7 @@ function renderPosiciones() {
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
             '<td>' + esc(j.nombre || '') + ' ' + esc(j.apellidos || '') + '</td>' +
             '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
-            '<td class="col-stat"><strong style="color:var(--primary)">' + (j.JG || 0) + '</strong></td>' +
+            '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +
             '</tr>'
         ).join('') +
         '</tbody>' +
