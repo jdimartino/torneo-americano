@@ -482,6 +482,8 @@ async function confirmCSVImport(nuevos) {
 // DRAW (parejas sin score)
 // ═══════════════════════════════════════════
 let editingDrawId = null;
+let drawScore1 = 0;
+let drawScore2 = 0;
 
 function renderDraw() {
     const panel = document.getElementById('panel-draw');
@@ -490,6 +492,16 @@ function renderDraw() {
 
     const isEditing = !!editingDrawId;
     const ep = isEditing ? allPartidos.find(x => x.id === editingDrawId) : null;
+
+    if (isEditing && ep && ep.games1 !== null) {
+        drawScore1 = ep.games1 || 0;
+        drawScore2 = ep.games2 || 0;
+    } else {
+        drawScore1 = 0;
+        drawScore2 = 0;
+    }
+
+    const showScore = isEditing && ep && ep.games1 !== null;
 
     panel.innerHTML =
         '<div class="card">' +
@@ -509,6 +521,28 @@ function renderDraw() {
         '<select id="d-p2c"><option value="">— Jugador C —</option>' + opts + '</select>' +
         '<select id="d-p2d"><option value="">— Jugador D —</option>' + opts + '</select>' +
         '</div>' +
+        (showScore ?
+        '<div class="score-display-card">' +
+        '<div class="score-row">' +
+        '<span class="team-dot blue"></span>' +
+        '<span class="team-name blue">Pareja 1</span>' +
+        '<div class="score-control">' +
+        '<button class="score-btn team-blue" onclick="changeDrawScore(1,-1)">−</button>' +
+        '<span class="score-value blue" id="ds1">' + drawScore1 + '</span>' +
+        '<button class="score-btn team-blue" onclick="changeDrawScore(1,1)">+</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="score-row">' +
+        '<span class="team-dot gold"></span>' +
+        '<span class="team-name gold">Pareja 2</span>' +
+        '<div class="score-control">' +
+        '<button class="score-btn team-gold" onclick="changeDrawScore(2,-1)">−</button>' +
+        '<span class="score-value gold" id="ds2">' + drawScore2 + '</span>' +
+        '<button class="score-btn team-gold" onclick="changeDrawScore(2,1)">+</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="score-label" id="ds-label"><span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + drawScore1 + '-' + drawScore2 + '</div>' +
+        '</div>' : '') +
         '<div class="btn-group-spaced" style="margin-top:0.75rem;">' +
         '<button class="btn btn-primary" id="btn-save-draw"><span class="material-symbols-outlined" style="font-size:1rem;">' + (isEditing ? 'save' : 'add') + '</span> ' + (isEditing ? 'Actualizar' : 'Crear Parejas') + '</button>' +
         (isEditing ? '<button class="btn btn-outline" id="btn-cancel-draw"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' : '') +
@@ -552,6 +586,12 @@ function renderDraw() {
     panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delDraw)));
 }
 
+window.changeDrawScore = function(team, delta) {
+    if (team === 1) { drawScore1 = Math.max(0, drawScore1 + delta); document.getElementById('ds1').textContent = drawScore1; }
+    else { drawScore2 = Math.max(0, drawScore2 + delta); document.getElementById('ds2').textContent = drawScore2; }
+    document.getElementById('ds-label').innerHTML = '<span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + drawScore1 + '-' + drawScore2;
+};
+
 function toggleDrawForm(open) {
     const body = document.getElementById('d-form-body');
     const btn = document.getElementById('d-toggle-form');
@@ -574,15 +614,19 @@ async function saveDrawPartido() {
     if (editingDrawId) {
         const old = allPartidos.find(p => p.id === editingDrawId);
         const batch = writeBatch(db);
-        if (old && old.games1 !== undefined) {
+        if (old && old.games1 !== null) {
             batch.update(doc(db, 'jugadores', old.p1a_id), { JG: increment(-old.games1) });
             batch.update(doc(db, 'jugadores', old.p1b_id), { JG: increment(-old.games1) });
             batch.update(doc(db, 'jugadores', old.p2c_id), { JG: increment(-old.games2) });
             batch.update(doc(db, 'jugadores', old.p2d_id), { JG: increment(-old.games2) });
         }
+        const hasScore = document.getElementById('ds1');
+        const g1 = hasScore ? drawScore1 : null;
+        const g2 = hasScore ? drawScore2 : null;
+        const scoreStr = hasScore ? drawScore1 + '-' + drawScore2 : '';
         batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
-            pareja1_nombre, pareja2_nombre, fecha: new Date()
+            pareja1_nombre, pareja2_nombre, score: scoreStr, games1: g1, games2: g2, fecha: new Date()
         });
         showLoading('Actualizando partido...');
         try {
@@ -733,6 +777,11 @@ async function saveResultado(id) {
         batch.update(doc(db, 'jugadores', p.p2c_id), { JJ: increment(1) });
         batch.update(doc(db, 'jugadores', p.p2d_id), { JJ: increment(1) });
     }
+
+    batch.update(doc(db, 'jugadores', p.p1a_id), { JG: increment(rs.s1) });
+    batch.update(doc(db, 'jugadores', p.p1b_id), { JG: increment(rs.s1) });
+    batch.update(doc(db, 'jugadores', p.p2c_id), { JG: increment(rs.s2) });
+    batch.update(doc(db, 'jugadores', p.p2d_id), { JG: increment(rs.s2) });
 
     batch.update(doc(db, 'partidos_eliminatoria', id), {
         score: scoreStr, games1: rs.s1, games2: rs.s2, fecha: new Date()
