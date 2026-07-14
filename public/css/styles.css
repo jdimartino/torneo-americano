@@ -806,6 +806,26 @@ td.col-pos, td.col-stat { text-align: center; }
 }
 
 /* ═══════════════════════════════════════════
+   ADMIN LINK
+   ═══════════════════════════════════════════ */
+.admin-link {
+  color: var(--on-surface-variant-30);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+
+.admin-link:hover {
+  color: var(--primary);
+  background: rgba(63, 255, 139, 0.08);
+}
+
+/* ═══════════════════════════════════════════
    ADMIN PANELS
    ═══════════════════════════════════════════ */
 .admin-panel {
