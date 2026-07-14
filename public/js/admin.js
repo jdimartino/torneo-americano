@@ -61,8 +61,31 @@ onAuthStateChanged(auth, (user) => {
 document.getElementById('login-btn').addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    try { await signInWithEmailAndPassword(auth, email, password); }
-    catch (e) { toast(e.message, 'error'); }
+    const errDiv = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    if (!email || !password) { errDiv.textContent = 'Ingresá email y contraseña'; errDiv.style.display = 'block'; return; }
+    errDiv.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;animation:spin 1s linear infinite;">progress_activity</span> Ingresando...';
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (e) {
+        console.error('Login error:', e.code, e.message);
+        const msgs = {
+            'auth/invalid-credential': 'Email o contraseña incorrectos',
+            'auth/user-not-found': 'No existe una cuenta con ese email',
+            'auth/wrong-password': 'Contraseña incorrecta',
+            'auth/too-many-requests': 'Demasiados intentos. Esperá unos minutos',
+            'auth/network-request-failed': 'Error de conexión',
+            'auth/invalid-email': 'Email inválido'
+        };
+        errDiv.textContent = msgs[e.code] || e.message;
+        errDiv.style.display = 'block';
+        toast(e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;">login</span> Ingresar';
+    }
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => { await signOut(auth); });

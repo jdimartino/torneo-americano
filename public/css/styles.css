@@ -729,6 +729,11 @@ td.col-pos, td.col-stat { text-align: center; }
   to { opacity: 0; transform: translateY(16px); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ═══════════════════════════════════════════
    ADMIN PANELS
    ═══════════════════════════════════════════ */
