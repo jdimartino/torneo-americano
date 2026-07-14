@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torneo Americano</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Torneo Americano</h1>
+        <nav>
+            <button onclick="showTab('posiciones')">Posiciones</button>
+            <button onclick="showTab('resultados')">Resultados</button>
+            <button onclick="showTab('llaves')">Llaves</button>
+        </nav>
+    </header>
+
+    <main id="app">
+        <section id="posiciones" class="tab-content">
+            <h2>Clasificación</h2>
+            <!-- Tabla aquí -->
+        </section>
+        <section id="resultados" class="tab-content" style="display:none;">
+            <h2>Resultados</h2>
+            <!-- Historial aquí -->
+        </section>
+        <section id="llaves" class="tab-content" style="display:none;">
+            <h2>Cuartos de Final</h2>
+            <!-- Llave gráfica aquí -->
+        </section>
+    </main>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
