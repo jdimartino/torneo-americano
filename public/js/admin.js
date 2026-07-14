@@ -169,7 +169,11 @@ function renderJugadores() {
     const panel = document.getElementById('panel-jugadores');
     panel.innerHTML =
         '<div class="card">' +
-        '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">person_add</span> Nuevo Jugador</h3>' +
+        '<button class="collapse-toggle" id="j-toggle-form" type="button" aria-expanded="false">' +
+        '<span class="collapse-toggle-left"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">person_add</span> Nuevo Jugador</span>' +
+        '<span class="material-symbols-outlined chevron">expand_more</span>' +
+        '</button>' +
+        '<div id="j-form-body" style="display:none;">' +
         '<div class="form-row">' +
         '<div class="form-group"><label>Nombres</label><input type="text" id="j-nombre" placeholder="Nombres"></div>' +
         '<div class="form-group"><label>Apellidos</label><input type="text" id="j-apellidos" placeholder="Apellidos"></div>' +
@@ -183,16 +187,30 @@ function renderJugadores() {
         '<div class="checkbox-group"><input type="checkbox" id="j-pago"><label for="j-pago"><span class="material-symbols-outlined" style="font-size:1rem;color:var(--primary);">payments</span> Pago Recibido</label></div>' +
         '<button class="btn btn-primary btn-block" id="btn-add-jugador"><span class="material-symbols-outlined" style="font-size:1rem;">person_add</span> Agregar Jugador</button>' +
         '</div>' +
+        '</div>' +
         '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos</div>' +
         '<div class="search-bar"><span class="material-symbols-outlined search-icon">search</span><input type="text" id="jugador-search" placeholder="Buscar por nombre, categoría, email..." value="' + esc(jugadorSearchTerm) + '"></div>' +
         '<div id="jugadores-list"></div>';
 
+    document.getElementById('j-toggle-form').addEventListener('click', () => {
+        const open = document.getElementById('j-form-body').style.display !== 'none';
+        toggleJugadorForm(!open);
+    });
     document.getElementById('btn-add-jugador').addEventListener('click', addJugador);
     document.getElementById('jugador-search').addEventListener('input', (e) => {
         jugadorSearchTerm = e.target.value;
         renderJugadoresList();
     });
     renderJugadoresList();
+}
+
+function toggleJugadorForm(open) {
+    const body = document.getElementById('j-form-body');
+    const btn = document.getElementById('j-toggle-form');
+    if (!body || !btn) return;
+    body.style.display = open ? 'block' : 'none';
+    btn.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 function renderJugadoresList() {
@@ -304,6 +322,7 @@ function editJugador(id) {
             hideLoading();
         }
     };
+    toggleJugadorForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

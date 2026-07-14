@@ -238,13 +238,35 @@ body.admin-body { max-width: 600px; }
   box-shadow: var(--shadow-card);
 }
 
-.card h3 {
+ .card h3 {
   font-family: 'Lexend', sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   margin-bottom: 0.6rem;
   color: var(--on-surface);
 }
+
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--surface-low);
+  border: 1px solid var(--white-5);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  font-family: 'Lexend', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  transition: background 0.15s ease;
+}
+.collapse-toggle:hover { background: var(--surface); }
+.collapse-toggle-left { display: flex; align-items: center; gap: 0.45rem; }
+.collapse-toggle .chevron { font-size: 1.3rem; transition: transform 0.2s ease; }
+.collapse-toggle.open .chevron { transform: rotate(180deg); }
+#j-form-body { margin-top: 0.85rem; }
 
 /* ═══════════════════════════════════════════
    TABLES

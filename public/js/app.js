@@ -112,7 +112,7 @@ function renderCuartos() {
                 '</div>' +
                 '<div class="bracket-score' + (!c.score ? ' tbd' : '') + '">' + esc(c.score || '—') + '</div>' +
                 '</div>'
-            ).join('') +
+            ).join('')
         ) +
         '</div>' +
         '</div>';
