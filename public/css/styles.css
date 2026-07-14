@@ -752,6 +752,44 @@ td.col-pos, td.col-stat { text-align: center; }
   border-bottom: 1px solid var(--white-5);
 }
 
+.search-bar {
+  position: relative;
+  margin-bottom: 0.75rem;
+}
+
+.search-bar .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem;
+  color: var(--on-surface-variant-30);
+  pointer-events: none;
+}
+
+.search-bar input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--white-10);
+  border-radius: var(--radius-lg);
+  padding: 0.65rem 1rem 0.65rem 2.5rem;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.search-bar input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(63, 255, 139, 0.15);
+}
+
+.search-bar input::placeholder {
+  color: var(--on-surface-variant-30);
+}
+
 /* ═══════════════════════════════════════════
    PLAYER CARD (ADMIN)
    ═══════════════════════════════════════════ */

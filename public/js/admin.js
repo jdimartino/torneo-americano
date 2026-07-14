@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https:/
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 let allJugadores = [];
+let jugadorSearchTerm = '';
 let allPartidos = [];
 let allCuartos = [];
 let allSemis = [];
@@ -116,6 +117,18 @@ function renderPanel(panelId) {
 // ═══════════════════════════════════════════
 function renderJugadores() {
     const panel = document.getElementById('panel-jugadores');
+    const sorted = [...allJugadores].sort((a, b) => {
+        const apA = (a.apellidos || '').toLowerCase();
+        const apB = (b.apellidos || '').toLowerCase();
+        if (apA !== apB) return apA.localeCompare(apB);
+        return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
+    });
+    const term = jugadorSearchTerm.toLowerCase();
+    const filtered = term ? sorted.filter(j => {
+        const haystack = [j.nombre, j.apellidos, j.categoria, j.telefono, j.email, j.numero_accion].join(' ').toLowerCase();
+        return haystack.includes(term);
+    }) : sorted;
+
     panel.innerHTML =
         '<div class="card">' +
         '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--primary);">person_add</span> Nuevo Jugador</h3>' +
@@ -132,9 +145,10 @@ function renderJugadores() {
         '<div class="checkbox-group"><input type="checkbox" id="j-pago"><label for="j-pago"><span class="material-symbols-outlined" style="font-size:1rem;color:var(--primary);">payments</span> Pago Recibido</label></div>' +
         '<button class="btn btn-primary btn-block" id="btn-add-jugador"><span class="material-symbols-outlined" style="font-size:1rem;">person_add</span> Agregar Jugador</button>' +
         '</div>' +
-        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos (' + allJugadores.length + ')</div>' +
-        (allJugadores.length ? '' : '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">group_off</span><p>No hay jugadores inscritos</p></div>') +
-        allJugadores.map(j =>
+        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">groups</span> Jugadores Inscritos (' + filtered.length + (term ? ' de ' + allJugadores.length : '') + ')</div>' +
+        '<div class="search-bar"><span class="material-symbols-outlined search-icon">search</span><input type="text" id="jugador-search" placeholder="Buscar jugador..." value="' + esc(jugadorSearchTerm) + '"></div>' +
+        (!filtered.length ? '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">' + (term ? 'search_off' : 'group_off') + '</span><p>' + (term ? 'No se encontraron resultados' : 'No hay jugadores inscritos') + '</p></div>') +
+        filtered.map(j =>
             '<div class="player-card">' +
             '<div class="player-main">' +
             '<div class="player-name">' + esc(j.nombre) + ' ' + esc(j.apellidos) + '</div>' +
@@ -158,6 +172,10 @@ function renderJugadores() {
         ).join('');
 
     document.getElementById('btn-add-jugador').addEventListener('click', addJugador);
+    document.getElementById('jugador-search').addEventListener('input', (e) => {
+        jugadorSearchTerm = e.target.value;
+        renderJugadores();
+    });
     panel.querySelectorAll('[data-edit-jugador]').forEach(b => b.addEventListener('click', () => editJugador(b.dataset.editJugador)));
     panel.querySelectorAll('[data-del-jugador]').forEach(b => b.addEventListener('click', () => deleteJugador(b.dataset.delJugador)));
 }
