@@ -30,6 +30,10 @@ function esc(s) {
     return d.innerHTML;
 }
 
+function fixNames(s) {
+    return (s || '').replace(/ \+ /g, ' / ');
+}
+
 function toast(msg, type) {
     const container = document.querySelector('.toast-container') || (() => {
         const el = document.createElement('div');
@@ -66,9 +70,17 @@ function panelLoading(panel, msg) {
     panel.innerHTML = '<div class="panel-loading"><div class="tennis-ball-spinner"></div><div class="loading-text">' + (msg || 'Cargando...') + '</div></div>';
 }
 
+function shortName(j) {
+    if (!j) return '';
+    const firstName = (j.nombre || '').split(' ')[0];
+    const firstLast = (j.apellidos || '').split(' ')[0];
+    const cat = j.categoria ? ' (' + j.categoria + ')' : '';
+    return firstName + ' ' + firstLast + cat;
+}
+
 function getPlayerName(id) {
     const j = allJugadores.find(x => x.id === id);
-    return j ? (j.nombre + ' ' + j.apellidos) : '';
+    return j ? shortName(j) : '';
 }
 
 function parseScore(scoreStr) {
@@ -85,12 +97,37 @@ function compareRanking(a, b) {
     return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
 }
 
+function rankBadge(pos) {
+    if (pos === 1) return '<span class="rank-badge gold">1</span>';
+    if (pos === 2) return '<span class="rank-badge silver">2</span>';
+    if (pos === 3) return '<span class="rank-badge bronze">3</span>';
+    return '<span class="rank-badge">' + pos + '</span>';
+}
+
+// ── Tab Scroll Indicator ──
+function setupTabScroll() {
+    document.querySelectorAll('.tab-nav-wrap').forEach(wrap => {
+        const nav = wrap.querySelector('.tab-nav');
+        const btn = wrap.querySelector('.tab-scroll-btn');
+        if (!nav || !btn) return;
+        const update = () => {
+            const overflow = nav.scrollWidth > nav.clientWidth + nav.scrollLeft + 4;
+            btn.classList.toggle('hidden', !overflow);
+        };
+        btn.addEventListener('click', () => nav.scrollBy({ left: 150, behavior: 'smooth' }));
+        nav.addEventListener('scroll', update);
+        window.addEventListener('resize', update);
+        update();
+    });
+}
+
 // ── Auth ──
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('login-container-wrapper').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
+        setupTabScroll();
         panelLoading(document.getElementById('panel-jugadores'), 'Cargando jugadores...');
         await loadData();
         dataLoaded = true;
@@ -175,6 +212,7 @@ function renderPanel(panelId) {
         case 'jugadores': renderJugadores(); break;
         case 'draw': renderDraw(); break;
         case 'resultados': renderResultados(); break;
+        case 'posiciones': renderPosiciones(); break;
         case 'cuartos-admin': renderCuartosAdmin(); break;
         case 'semis-admin': renderSemisAdmin(); break;
         case 'final-admin': renderFinalAdmin(); break;
@@ -267,9 +305,8 @@ function renderJugadoresList() {
         filtered.map(j =>
             '<div class="player-card">' +
             '<div class="player-main">' +
-            '<div class="player-name">' + esc(j.nombre) + ' ' + esc(j.apellidos) + '</div>' +
+            '<div class="player-name">' + esc(shortName(j)) + '</div>' +
             '<div class="player-meta">' +
-            (j.categoria ? '<span class="material-symbols-outlined" style="font-size:0.75rem;">label</span> ' + esc(j.categoria) + ' · ' : '') +
             (j.telefono ? '<span class="material-symbols-outlined" style="font-size:0.75rem;">phone</span> ' + esc(j.telefono) + ' · ' : '') +
             (j.email ? '<span class="material-symbols-outlined" style="font-size:0.75rem;">email</span> ' + esc(j.email) : '') +
             '</div>' +
@@ -447,13 +484,13 @@ function showCSVPreview(all, nuevos, existentes) {
         (nuevos.length ? '<div style="max-height:200px;overflow-y:auto;margin-bottom:0.75rem;">' +
             nuevos.map(j =>
                 '<div style="font-size:0.8rem;padding:0.3rem 0;border-bottom:1px solid var(--white-5);color:var(--text);">' +
-                esc(j.nombre) + ' ' + esc(j.apellidos) + ' — <span style="color:var(--on-surface-variant-30);">' + esc(j.email) + '</span>' +
+                esc(shortName(j)) + ' — <span style="color:var(--on-surface-variant-30);">' + esc(j.email) + '</span>' +
                 '</div>'
             ).join('') + '</div>' : '') +
         (existentes.length ? '<details style="margin-bottom:0.75rem;"><summary style="font-size:0.8rem;color:var(--on-surface-variant-30);cursor:pointer;">Ver ' + existentes.length + ' existentes</summary><div style="max-height:150px;overflow-y:auto;">' +
             existentes.map(j =>
                 '<div style="font-size:0.75rem;padding:0.25rem 0;color:var(--on-surface-variant-30);">' +
-                esc(j.nombre) + ' ' + esc(j.apellidos) + ' — ' + esc(j.email) +
+                esc(shortName(j)) + ' — ' + esc(j.email) +
                 '</div>'
             ).join('') + '</details></details>' : '') +
         '<div class="btn-group-spaced">' +
@@ -506,10 +543,18 @@ let editingDrawId = null;
 let drawScore1 = 0;
 let drawScore2 = 0;
 
+function formatMatchDate(fecha) {
+    if (!fecha) return '';
+    try {
+        const d = fecha.toDate ? fecha.toDate() : new Date(fecha);
+        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-AR');
+    } catch (e) { return ''; }
+}
+
 function renderDraw() {
     const panel = document.getElementById('panel-draw');
-    const activos = allJugadores.filter(j => j.pago_recibido);
-    const opts = activos.map(j => '<option value="' + j.id + '">' + esc(j.nombre) + ' ' + esc(j.apellidos) + '</option>').join('');
+    const activos = [...allJugadores];
+    const opts = activos.map(j => '<option value="' + j.id + '">' + (j.pago_recibido ? '' : '⚠ ') + esc(shortName(j)) + '</option>').join('');
 
     const isEditing = !!editingDrawId;
     const ep = isEditing ? allPartidos.find(x => x.id === editingDrawId) : null;
@@ -572,19 +617,34 @@ function renderDraw() {
         '</div>' +
         '</div>' +
         '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">sports_tennis</span> Partidos DRAW (' + allPartidos.length + ')</div>' +
+        '<input type="text" id="draw-search" class="search-input" placeholder="🔍 Buscar por nombre de jugador...">' +
         (!allPartidos.length ? '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">sports_tennis</span><p>No hay partidos en el DRAW</p></div>' : '') +
-        allPartidos.map(p =>
-            '<div class="match-item">' +
-            '<div class="match-info">' +
-            '<div class="match-teams"><span class="material-symbols-outlined" style="font-size:0.85rem;color:var(--primary);">sports_tennis</span> ' + esc(p.pareja1_nombre || '') + ' <span style="color:var(--on-surface-variant-30)">vs</span> ' + esc(p.pareja2_nombre || '') + '</div>' +
-            '<div class="match-meta">' + (p.score ? '<span class="match-score">' + esc(p.score) + '</span> · ' : '') + (p.fecha ? new Date(p.fecha.toDate ? p.fecha.toDate() : p.fecha).toLocaleDateString('es-AR') : '') + '</div>' +
-            '</div>' +
-            '<div class="btn-group">' +
-            '<button class="btn btn-sm btn-outline" data-edit-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">edit</span></button>' +
-            '<button class="btn btn-sm btn-danger" data-del-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
-            '</div>' +
-            '</div>'
-        ).join('');
+        allPartidos.map(p => {
+            const s1 = p.games1 != null ? p.games1 : 0;
+            const s2 = p.games2 != null ? p.games2 : 0;
+            let c1 = '', c2 = '';
+            if (s1 > s2) { c1 = 'state-win'; c2 = 'state-lose'; }
+            else if (s2 > s1) { c1 = 'state-lose'; c2 = 'state-win'; }
+            else { c1 = 'state-tie'; c2 = 'state-tie'; }
+            return '<div class="match-item">' +
+                '<div class="match-info">' +
+                '<div class="match-pair-row">' +
+                '<div class="match-pair-name team-blue ' + c1 + '">' + esc(fixNames(p.pareja1_nombre || '')) + '</div>' +
+                '<div class="match-pair-score team-blue ' + c1 + '">' + s1 + '</div>' +
+                '</div>' +
+                '<div class="match-pair-divider"></div>' +
+                '<div class="match-pair-row">' +
+                '<div class="match-pair-name team-gold ' + c2 + '">' + esc(fixNames(p.pareja2_nombre || '')) + '</div>' +
+                '<div class="match-pair-score team-gold ' + c2 + '">' + s2 + '</div>' +
+                '</div>' +
+                '<div class="match-meta">' + formatMatchDate(p.fecha) + '</div>' +
+                '</div>' +
+                '<div class="btn-group">' +
+                '<button class="btn btn-sm btn-outline" data-edit-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">edit</span></button>' +
+                '<button class="btn btn-sm btn-danger" data-del-draw="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
+                '</div>' +
+                '</div>';
+        }).join('');
 
     if (isEditing && ep) {
         setTimeout(() => {
@@ -605,6 +665,18 @@ function renderDraw() {
     }
     panel.querySelectorAll('[data-edit-draw]').forEach(b => b.addEventListener('click', () => { editingDrawId = b.dataset.editDraw; renderDraw(); }));
     panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delDraw)));
+
+    const drawSearch = document.getElementById('draw-search');
+    if (drawSearch) {
+        drawSearch.addEventListener('input', () => {
+            const term = drawSearch.value.toLowerCase();
+            const items = panel.querySelectorAll('.match-item');
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+    }
 }
 
 window.changeDrawScore = function(team, delta) {
@@ -629,8 +701,8 @@ async function saveDrawPartido() {
     const p2c = document.getElementById('d-p2c').value;
     const p2d = document.getElementById('d-p2d').value;
     if (!p1a || !p1b || !p2c || !p2d) { toast('Seleccioná los 4 jugadores', 'error'); return; }
-    const pareja1_nombre = getPlayerName(p1a) + ' + ' + getPlayerName(p1b);
-    const pareja2_nombre = getPlayerName(p2c) + ' + ' + getPlayerName(p2d);
+    const pareja1_nombre = getPlayerName(p1a) + ' / ' + getPlayerName(p1b);
+    const pareja2_nombre = getPlayerName(p2c) + ' / ' + getPlayerName(p2d);
 
     if (editingDrawId) {
         const old = allPartidos.find(p => p.id === editingDrawId);
@@ -795,44 +867,60 @@ function renderResultados() {
 
     panel.innerHTML =
         '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">sports_score</span> Resultados Eliminatoria (' + allPartidos.length + ')</div>' +
+        '<input type="text" id="result-search" class="search-input" placeholder="🔍 Buscar por nombre de jugador...">' +
         allPartidos.map(p => {
             const rs = resultScores[p.id];
             const hasScore = p.score && p.games1 !== null;
+            const s1 = rs.s1, s2 = rs.s2;
+            let c1 = '', c2 = '';
+            if (s1 > s2) { c1 = 'state-win'; c2 = 'state-lose'; }
+            else if (s2 > s1) { c1 = 'state-lose'; c2 = 'state-win'; }
+            else { c1 = 'state-tie'; c2 = 'state-tie'; }
             return '<div class="card">' +
-                '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">' +
-                '<div style="flex:1;">' +
-                '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(p.pareja1_nombre || '') + '</div>' +
-                '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.15rem;">vs</div>' +
-                '<div style="font-size:0.82rem;color:var(--secondary);">' + esc(p.pareja2_nombre || '') + '</div>' +
-                '</div>' +
-                '<button class="btn btn-sm btn-danger" data-del-result="' + p.id + '" style="align-self:flex-start;"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
-                '</div>' +
-                '<div class="score-display-card">' +
-                '<div class="score-row">' +
-                '<span class="team-dot blue"></span>' +
-                '<span class="team-name blue">Pareja 1</span>' +
-                '<div class="score-control">' +
+                '<div class="match-info">' +
+                '<div class="match-pair-row">' +
+                '<div class="match-pair-name team-blue ' + c1 + '" id="rn1-' + p.id + '">' + esc(fixNames(p.pareja1_nombre || '')) + '</div>' +
+                '<div class="match-pair-score team-blue ' + c1 + '" id="rs1-' + p.id + '">' + s1 + '</div>' +
+                '<div class="match-score-ctl">' +
                 '<button class="score-btn team-blue" data-rs-id="' + p.id + '" data-team="1" data-delta="-1">−</button>' +
-                '<span class="score-value blue" id="rs1-' + p.id + '">' + rs.s1 + '</span>' +
                 '<button class="score-btn team-blue" data-rs-id="' + p.id + '" data-team="1" data-delta="1">+</button>' +
                 '</div>' +
                 '</div>' +
-                '<div class="score-row">' +
-                '<span class="team-dot gold"></span>' +
-                '<span class="team-name gold">Pareja 2</span>' +
-                '<div class="score-control">' +
+                '<div class="match-pair-divider"></div>' +
+                '<div class="match-pair-row">' +
+                '<div class="match-pair-name team-gold ' + c2 + '" id="rn2-' + p.id + '">' + esc(fixNames(p.pareja2_nombre || '')) + '</div>' +
+                '<div class="match-pair-score team-gold ' + c2 + '" id="rs2-' + p.id + '">' + s2 + '</div>' +
+                '<div class="match-score-ctl">' +
                 '<button class="score-btn team-gold" data-rs-id="' + p.id + '" data-team="2" data-delta="-1">−</button>' +
-                '<span class="score-value gold" id="rs2-' + p.id + '">' + rs.s2 + '</span>' +
                 '<button class="score-btn team-gold" data-rs-id="' + p.id + '" data-team="2" data-delta="1">+</button>' +
                 '</div>' +
                 '</div>' +
-                '<div class="score-label" id="rs-label-' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + rs.s1 + '-' + rs.s2 + '</div>' +
+                '<div class="match-meta">' + formatMatchDate(p.fecha) + '</div>' +
                 '</div>' +
                 '<div class="btn-group-spaced">' +
                 '<button class="btn btn-primary btn-sm" data-save-result="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">' + (hasScore ? 'update' : 'save') + '</span> ' + (hasScore ? 'Actualizar Resultado' : 'Registrar Resultado') + '</button>' +
+                '<button class="btn btn-sm btn-danger" data-del-result="' + p.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span> Eliminar Partido</button>' +
                 '</div>' +
                 '</div>';
         }).join('');
+
+    function applyMatchState(id) {
+        const rs = resultScores[id];
+        if (!rs) return;
+        const els = ['rn1', 'rs1', 'rn2', 'rs2'].map(k => document.getElementById(k + '-' + id));
+        if (els.some(el => !el)) return;
+        const [n1, s1, n2, s2El] = els;
+        [n1, s1, n2, s2El].forEach(el => el.classList.remove('state-win', 'state-lose', 'state-tie'));
+        if (rs.s1 > rs.s2) {
+            [n1, s1].forEach(el => el.classList.add('state-win'));
+            [n2, s2El].forEach(el => el.classList.add('state-lose'));
+        } else if (rs.s2 > rs.s1) {
+            [n1, s1].forEach(el => el.classList.add('state-lose'));
+            [n2, s2El].forEach(el => el.classList.add('state-win'));
+        } else {
+            [n1, s1, n2, s2El].forEach(el => el.classList.add('state-tie'));
+        }
+    }
 
     panel.querySelectorAll('[data-rs-id]').forEach(b => {
         b.addEventListener('click', () => {
@@ -845,12 +933,24 @@ function renderResultados() {
             else rs.s2 = Math.max(0, rs.s2 + delta);
             document.getElementById('rs1-' + id).textContent = rs.s1;
             document.getElementById('rs2-' + id).textContent = rs.s2;
-            document.getElementById('rs-label-' + id).innerHTML = '<span class="material-symbols-outlined" style="font-size:0.75rem;">sports_score</span> Score: ' + rs.s1 + '-' + rs.s2;
+            applyMatchState(id);
         });
     });
 
     panel.querySelectorAll('[data-save-result]').forEach(b => b.addEventListener('click', () => saveResultado(b.dataset.saveResult)));
     panel.querySelectorAll('[data-del-result]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delResult)));
+
+    const resultSearch = document.getElementById('result-search');
+    if (resultSearch) {
+        resultSearch.addEventListener('input', () => {
+            const term = resultSearch.value.toLowerCase();
+            const cards = panel.querySelectorAll('.card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+    }
 }
 
 async function saveResultado(id) {
@@ -886,12 +986,40 @@ async function saveResultado(id) {
         await batch.commit();
         toast('Resultado guardado', 'success');
         await refreshData();
+        document.getElementById('panel-resultados').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (e) {
         toast('Error al guardar resultado', 'error');
         console.error(e);
     } finally {
         hideLoading();
     }
+}
+
+// ═══════════════════════════════════════════
+// POSICIONES
+// ═══════════════════════════════════════════
+function renderPosiciones() {
+    const panel = document.getElementById('panel-posiciones');
+    if (!allJugadores.length) {
+        panel.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined">groups</span><p>Aún no hay jugadores inscritos</p></div>';
+        return;
+    }
+    panel.innerHTML =
+        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">leaderboard</span> Posiciones</div>' +
+        '<table>' +
+        '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
+        '<tbody>' +
+        [...allJugadores].sort(compareRanking).map((j, i) =>
+            '<tr>' +
+            '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
+            '<td>' + esc(shortName(j)) + '</td>' +
+            '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
+            '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +
+            '</tr>'
+        ).join('') +
+        '</tbody>' +
+        '</table>' +
+        '<div style="font-size:0.65rem;color:var(--on-surface-variant-40);text-align:center;margin-top:0.5rem;">JJ = Juegos Jugados &middot; GG = Juegos Ganados</div>';
 }
 
 // ═══════════════════════════════════════════
@@ -920,15 +1048,15 @@ function renderCuartosAdmin() {
             '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--secondary);">emoji_events</span>' +
             '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Grupo ' + c.grupo + '</span>' +
             '</div>' +
-            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(c.pareja1_nombre || '—') + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(c.pareja1_nombre || '—')) + '</div>' +
             '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(c.pareja2_nombre || '—') + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(c.pareja2_nombre || '—')) + '</div>' +
             '<div class="form-row" style="align-items:center;">' +
             '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="c-score-' + c.id + '" placeholder="4-2" value="' + esc(c.score || '') + '" style="max-width:80px;"></div>' +
             '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="c-ganador-' + c.id + '">' +
             '<option value="">— Seleccionar —</option>' +
-            '<option value="pareja1"' + (c.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(c.pareja1_nombre || 'Pareja 1') + '</option>' +
-            '<option value="pareja2"' + (c.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(c.pareja2_nombre || 'Pareja 2') + '</option>' +
+            '<option value="pareja1"' + (c.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(c.pareja1_nombre || 'Pareja 1')) + '</option>' +
+            '<option value="pareja2"' + (c.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(c.pareja2_nombre || 'Pareja 2')) + '</option>' +
             '</select></div>' +
             '</div>' +
             '<div class="btn-group-spaced">' +
@@ -964,9 +1092,9 @@ async function generarCuartos() {
             batch.set(ref, {
                 grupo: g.grupo,
                 pareja1_id_a: g.p1a.id, pareja1_id_b: g.p1b.id,
-                pareja1_nombre: g.p1a.nombre + ' ' + g.p1a.apellidos + ' + ' + g.p1b.nombre + ' ' + g.p1b.apellidos,
+                pareja1_nombre: shortName(g.p1a) + ' / ' + shortName(g.p1b),
                 pareja2_id_a: g.p2a.id, pareja2_id_b: g.p2b.id,
-                pareja2_nombre: g.p2a.nombre + ' ' + g.p2a.apellidos + ' + ' + g.p2b.nombre + ' ' + g.p2b.apellidos,
+                pareja2_nombre: shortName(g.p2a) + ' / ' + shortName(g.p2b),
                 score: '', ganador: ''
             });
         }
@@ -1074,15 +1202,15 @@ function renderSemisAdmin() {
             '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--team);">military_tech</span>' +
             '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Semifinal ' + s.cruce + '</span>' +
             '</div>' +
-            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(s.pareja1_nombre || '—') + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(s.pareja1_nombre || '—')) + '</div>' +
             '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(s.pareja2_nombre || '—') + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(s.pareja2_nombre || '—')) + '</div>' +
             '<div class="form-row" style="align-items:center;">' +
             '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="s-score-' + s.id + '" placeholder="4-2" value="' + esc(s.score || '') + '" style="max-width:80px;"></div>' +
             '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="s-ganador-' + s.id + '">' +
             '<option value="">— Seleccionar —</option>' +
-            '<option value="pareja1"' + (s.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(s.pareja1_nombre || 'Pareja 1') + '</option>' +
-            '<option value="pareja2"' + (s.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(s.pareja2_nombre || 'Pareja 2') + '</option>' +
+            '<option value="pareja1"' + (s.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(s.pareja1_nombre || 'Pareja 1')) + '</option>' +
+            '<option value="pareja2"' + (s.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(s.pareja2_nombre || 'Pareja 2')) + '</option>' +
             '</select></div>' +
             '</div>' +
             '<div class="btn-group-spaced">' +
@@ -1154,28 +1282,42 @@ function renderFinalAdmin() {
         return;
     }
     const f = allFinales[0];
-    panel.innerHTML =
-        '<div class="card">' +
+    const hasWinner = f.ganador;
+    const winnerName = hasWinner
+        ? (f.ganador === 'pareja1' ? fixNames(f.pareja1_nombre) : fixNames(f.pareja2_nombre))
+        : '';
+    let html = '<div class="card">';
+    if (hasWinner) {
+        html +=
+            '<div class="champion-card" style="margin-bottom:0.75rem;">' +
+            '<span class="champion-trophy">🏆</span>' +
+            '<div class="champion-title">¡CAMPEONES!</div>' +
+            '<div class="champion-name">' + esc(winnerName) + '</div>' +
+            (f.score ? '<div class="champion-score">Final: ' + esc(f.score) + '</div>' : '') +
+            '</div>';
+    }
+    html +=
         '<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">' +
         '<span class="material-symbols-outlined" style="font-size:1rem;color:var(--secondary);">workspace_premium</span>' +
         '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Gran Final</span>' +
         '</div>' +
-        '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(f.pareja1_nombre || '—') + '</div>' +
+        '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(f.pareja1_nombre || '—')) + '</div>' +
         '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-        '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(f.pareja2_nombre || '—') + '</div>' +
+        '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(f.pareja2_nombre || '—')) + '</div>' +
         '<div class="form-row" style="align-items:center;">' +
         '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="f-score-' + f.id + '" placeholder="4-2" value="' + esc(f.score || '') + '" style="max-width:80px;"></div>' +
         '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="f-ganador-' + f.id + '">' +
         '<option value="">— Seleccionar —</option>' +
-        '<option value="pareja1"' + (f.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(f.pareja1_nombre || 'Pareja 1') + '</option>' +
-        '<option value="pareja2"' + (f.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(f.pareja2_nombre || 'Pareja 2') + '</option>' +
+        '<option value="pareja1"' + (f.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(f.pareja1_nombre || 'Pareja 1')) + '</option>' +
+        '<option value="pareja2"' + (f.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(f.pareja2_nombre || 'Pareja 2')) + '</option>' +
         '</select></div>' +
         '</div>' +
         '<div class="btn-group-spaced">' +
-        '<button class="btn btn-sm btn-primary" data-save-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">save</span> Guardar</button>' +
+        '<button class="btn btn-sm btn-primary" data-save-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">save</span> ' + (hasWinner ? 'Actualizar' : 'Guardar') + '</button>' +
         '<button class="btn btn-sm btn-danger" data-del-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
         '</div>' +
         '</div>';
+    panel.innerHTML = html;
 
     panel.querySelector('[data-save-final]').addEventListener('click', async () => {
         const score = document.getElementById('f-score-' + f.id).value.trim();

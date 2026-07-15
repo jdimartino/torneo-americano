@@ -11,14 +11,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="css/styles.css?v=15">
+    <link rel="stylesheet" href="css/styles.css?v=24">
 </head>
 <body class="admin-body">
 
     <header class="app-header" id="login-section">
         <div class="header-top">
             <div class="header-brand">
-                <div class="logo">TA</div>
+                <img src="logo.png" alt="Logo" class="logo-img">
                 <div>
                     <h1>Torneo Americano</h1>
                     <div class="header-subtitle"><span class="dot"></span> Admin Panel</div>
@@ -44,6 +44,9 @@
                 <button class="btn btn-primary btn-block" id="login-btn">
                     <span class="material-symbols-outlined" style="font-size:1.1rem;">login</span> Ingresar
                 </button>
+                <a href="index.html" class="btn btn-outline btn-block" style="margin-top:0.5rem;text-decoration:none;text-align:center;">
+                    <span class="material-symbols-outlined" style="font-size:1rem;">arrow_back</span> Volver al Torneo
+                </a>
             </div>
         </section>
 
@@ -51,14 +54,20 @@
             <header class="app-header">
                 <div class="admin-header">
                     <div class="header-brand">
-                        <div class="logo">TA</div>
+                        <img src="logo.png" alt="Logo" class="logo-img">
                         <h1>Admin</h1>
                     </div>
-                    <button class="logout-btn" id="logout-btn">
-                        <span class="material-symbols-outlined" style="font-size:0.9rem;">logout</span> Salir
-                    </button>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        <a href="index.html" class="logout-btn" style="text-decoration:none;">
+                            <span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span> Volver
+                        </a>
+                        <button class="logout-btn" id="logout-btn">
+                            <span class="material-symbols-outlined" style="font-size:0.9rem;">logout</span> Salir
+                        </button>
+                    </div>
                 </div>
                 <div class="header-line"></div>
+                <div class="tab-nav-wrap">
                 <nav class="tab-nav">
                     <button class="admin-tab-btn active" data-panel="jugadores" onclick="showPanel('jugadores')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">groups</span> Jugadores
@@ -68,6 +77,9 @@
                     </button>
                     <button class="admin-tab-btn" data-panel="resultados" onclick="showPanel('resultados')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">sports_score</span> Resultados
+                    </button>
+                    <button class="admin-tab-btn" data-panel="posiciones" onclick="showPanel('posiciones')">
+                        <span class="material-symbols-outlined" style="font-size:1rem;">leaderboard</span> Posiciones
                     </button>
                     <button class="admin-tab-btn" data-panel="cuartos-admin" onclick="showPanel('cuartos-admin')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">emoji_events</span> Cuartos
@@ -79,18 +91,27 @@
                         <span class="material-symbols-outlined" style="font-size:1rem;">workspace_premium</span> Final
                     </button>
                 </nav>
+                <button class="tab-scroll-btn" aria-label="Más pestañas">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+                </div>
             </header>
 
             <div id="panel-jugadores" class="admin-panel active"></div>
             <div id="panel-draw" class="admin-panel"></div>
             <div id="panel-resultados" class="admin-panel"></div>
+            <div id="panel-posiciones" class="admin-panel"></div>
             <div id="panel-cuartos-admin" class="admin-panel"></div>
             <div id="panel-semis-admin" class="admin-panel"></div>
             <div id="panel-final-admin" class="admin-panel"></div>
         </div>
     </main>
 
-    <script type="module" src="js/admin.js?v=16"></script>
+    <footer class="app-footer">
+        <p>Desarrollado por JDM Services Systems</p>
+    </footer>
+
+    <script type="module" src="js/admin.js?v=24"></script>
 
 </body>
 </html>
