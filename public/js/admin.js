@@ -614,16 +614,32 @@ async function saveDrawPartido() {
     if (editingDrawId) {
         const old = allPartidos.find(p => p.id === editingDrawId);
         const batch = writeBatch(db);
-        if (old && old.games1 !== null) {
-            batch.update(doc(db, 'jugadores', old.p1a_id), { GG: increment(-old.games1) });
-            batch.update(doc(db, 'jugadores', old.p1b_id), { GG: increment(-old.games1) });
-            batch.update(doc(db, 'jugadores', old.p2c_id), { GG: increment(-old.games2) });
-            batch.update(doc(db, 'jugadores', old.p2d_id), { GG: increment(-old.games2) });
-        }
         const hasScore = document.getElementById('ds1');
         const g1 = hasScore ? drawScore1 : null;
         const g2 = hasScore ? drawScore2 : null;
         const scoreStr = hasScore ? drawScore1 + '-' + drawScore2 : '';
+        const oldG1 = (old && old.games1 !== null) ? old.games1 : 0;
+        const oldG2 = (old && old.games1 !== null) ? old.games2 : 0;
+        const newG1 = hasScore ? drawScore1 : 0;
+        const newG2 = hasScore ? drawScore2 : 0;
+
+        const jgDelta = {};
+        if (old && old.games1 !== null) {
+            jgDelta[old.p1a_id] = (jgDelta[old.p1a_id] || 0) - oldG1;
+            jgDelta[old.p1b_id] = (jgDelta[old.p1b_id] || 0) - oldG1;
+            jgDelta[old.p2c_id] = (jgDelta[old.p2c_id] || 0) - oldG2;
+            jgDelta[old.p2d_id] = (jgDelta[old.p2d_id] || 0) - oldG2;
+        }
+        if (hasScore) {
+            jgDelta[p1a] = (jgDelta[p1a] || 0) + newG1;
+            jgDelta[p1b] = (jgDelta[p1b] || 0) + newG1;
+            jgDelta[p2c] = (jgDelta[p2c] || 0) + newG2;
+            jgDelta[p2d] = (jgDelta[p2d] || 0) + newG2;
+        }
+        for (const [playerId, delta] of Object.entries(jgDelta)) {
+            if (delta !== 0) batch.update(doc(db, 'jugadores', playerId), { GG: increment(delta) });
+        }
+
         batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
             pareja1_nombre, pareja2_nombre, score: scoreStr, games1: g1, games2: g2, fecha: new Date()
@@ -655,16 +671,18 @@ async function deleteDrawPartido(id) {
     const p = allPartidos.find(x => x.id === id);
     if (!p) return;
     const msg = (p.score && p.games1 !== null)
-        ? '⚠️ Este partido tiene score registrado. Se eliminará completamente del DRAW y de Resultados. Se descontarán JJ y GG de los jugadores. ¿Querés crearlo de nuevo en el DRAW para que aparezca en Resultados. ¿Confirmar eliminación?'
+        ? '⚠️ Este partido tiene score registrado. Se eliminará completamente del DRAW y de Resultados. Se descontarán JJ y GG de los jugadores. Crealo de nuevo en el DRAW para que aparezca en Resultados. ¿Confirmar eliminación?'
         : '¿Eliminar este partido del DRAW?';
     if (!confirm(msg)) return;
     showLoading('Eliminando partido...');
     try {
         const batch = writeBatch(db);
-        if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-        if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-        if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
-        if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        if (p.games1 !== null) {
+            if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+            if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
+            if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+            if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+        }
         batch.delete(doc(db, 'partidos_eliminatoria', id));
         await batch.commit();
         if (editingDrawId === id) editingDrawId = null;
@@ -763,25 +781,22 @@ async function saveResultado(id) {
     const scoreStr = rs.s1 + '-' + rs.s2;
     const p = allPartidos.find(x => x.id === id);
     const batch = writeBatch(db);
+    const oldG1 = (p && p.games1 !== null) ? p.games1 : 0;
+    const oldG2 = (p && p.games1 !== null) ? p.games2 : 0;
+    const isFirstResult = p && p.games1 === null;
 
-    if (p && p.games1 !== null) {
-        batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-p.games1) });
-        batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-p.games1) });
-        batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-p.games2) });
-        batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-p.games2) });
+    const jgDelta = {};
+    jgDelta[p.p1a_id] = (jgDelta[p.p1a_id] || 0) - oldG1 + rs.s1;
+    jgDelta[p.p1b_id] = (jgDelta[p.p1b_id] || 0) - oldG1 + rs.s1;
+    jgDelta[p.p2c_id] = (jgDelta[p.p2c_id] || 0) - oldG2 + rs.s2;
+    jgDelta[p.p2d_id] = (jgDelta[p.p2d_id] || 0) - oldG2 + rs.s2;
+
+    for (const [playerId, delta] of Object.entries(jgDelta)) {
+        const update = {};
+        if (delta !== 0) update.GG = increment(delta);
+        if (isFirstResult) update.JJ = increment(1);
+        if (Object.keys(update).length > 0) batch.update(doc(db, 'jugadores', playerId), update);
     }
-
-    if (p && p.games1 === null) {
-        batch.update(doc(db, 'jugadores', p.p1a_id), { JJ: increment(1) });
-        batch.update(doc(db, 'jugadores', p.p1b_id), { JJ: increment(1) });
-        batch.update(doc(db, 'jugadores', p.p2c_id), { JJ: increment(1) });
-        batch.update(doc(db, 'jugadores', p.p2d_id), { JJ: increment(1) });
-    }
-
-    batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(rs.s1) });
-    batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(rs.s1) });
-    batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(rs.s2) });
-    batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(rs.s2) });
 
     batch.update(doc(db, 'partidos_eliminatoria', id), {
         score: scoreStr, games1: rs.s1, games2: rs.s2, fecha: new Date()

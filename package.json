@@ -1,0 +1,24 @@
+{
+  "name": "torneo-americano",
+  "version": "1.0.0",
+  "description": "App de gestión de torneos de tenis.",
+  "main": "reset-gg.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdimartino/torneo-americano.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/jdimartino/torneo-americano/issues"
+  },
+  "homepage": "https://github.com/jdimartino/torneo-americano#readme",
+  "dependencies": {
+    "firebase": "^12.16.0"
+  }
+}
