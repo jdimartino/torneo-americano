@@ -1,4 +1,4 @@
-import { getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getDocs, collection, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { db } from './firebase.js';
 
 let allJugadores = [];
@@ -7,11 +7,21 @@ let allCuartos = [];
 let allSemis = [];
 let allFinales = [];
 
+const loadingHTML = '<div class="panel-loading"><div class="tennis-ball-spinner"></div><div class="loading-text">Cargando datos del torneo...</div></div>';
+
 function esc(s) {
     if (!s) return '';
     const d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
+}
+
+function compareRanking(a, b) {
+    const diff = (b.GG || 0) - (a.GG || 0);
+    if (diff !== 0) return diff;
+    const jj = (b.JJ || 0) - (a.JJ || 0);
+    if (jj !== 0) return jj;
+    return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
 }
 
 function formatDate(ts) {
@@ -34,15 +44,15 @@ async function loadAllData() {
         allJugadores = jugSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) { console.error('Error loading jugadores:', e); }
     try {
-        const partSnap = await getDocs(collection(db, 'partidos_eliminatoria'));
+        const partSnap = await getDocs(query(collection(db, 'partidos_eliminatoria'), orderBy('fecha', 'desc')));
         allPartidos = partSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) { console.error('Error loading partidos:', e); }
     try {
-        const cuartosSnap = await getDocs(collection(db, 'cuartos'));
+        const cuartosSnap = await getDocs(query(collection(db, 'cuartos'), orderBy('grupo')));
         allCuartos = cuartosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) { console.error('Error loading cuartos:', e); }
     try {
-        const semisSnap = await getDocs(collection(db, 'semifinales'));
+        const semisSnap = await getDocs(query(collection(db, 'semifinales'), orderBy('cruce')));
         allSemis = semisSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     } catch (e) { console.error('Error loading semifinales:', e); }
     try {
@@ -62,11 +72,7 @@ function renderPosiciones() {
         '<table>' +
         '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
         '<tbody>' +
-        [...allJugadores].sort((a, b) => {
-            const diff = (b.GG || 0) - (a.GG || 0);
-            if (diff !== 0) return diff;
-            return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
-        }).map((j, i) =>
+        [...allJugadores].sort(compareRanking).map((j, i) =>
             '<tr>' +
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
             '<td>' + esc(j.nombre || '') + ' ' + esc(j.apellidos || '') + '</td>' +
@@ -221,7 +227,10 @@ window.showTab = async function(tabId) {
     const tabBtn = document.querySelector('[data-tab="' + tabId + '"]');
     if (tabBtn) tabBtn.classList.add('active');
     const content = document.getElementById(tabId);
-    if (content) content.classList.add('active');
+    if (content) {
+        content.classList.add('active');
+        content.innerHTML = loadingHTML;
+    }
     await loadAllData();
     switch (tabId) {
         case 'posiciones': renderPosiciones(); break;
@@ -235,6 +244,10 @@ window.showTab = async function(tabId) {
 // ── Initial Load ──
 async function init() {
     try {
+        ['posiciones', 'resultados', 'cuartos', 'semifinales', 'finales'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = loadingHTML;
+        });
         await loadAllData();
         renderPosiciones();
         renderResultados();

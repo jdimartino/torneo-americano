@@ -10,6 +10,19 @@ let allSemis = [];
 let allFinales = [];
 let dataLoaded = false;
 
+// Función auxiliar para ajustar el delta de JJ y asegurar que no baje de 0
+const adjustAndIncrementJJ = (playerId, deltaJJ) => {
+    const currentPlayer = allJugadores.find(j => j.id === playerId);
+    const currentJJ = (currentPlayer ? currentPlayer.JJ : 0) || 0;
+
+    let actualDeltaJJ = deltaJJ;
+    if (currentJJ + actualDeltaJJ < 0) {
+        actualDeltaJJ = -currentJJ; // Ajustar el delta para que el JJ final sea 0
+    }
+    return actualDeltaJJ;
+};
+
+
 function esc(s) {
     if (!s) return '';
     const d = document.createElement('div');
@@ -62,6 +75,14 @@ function parseScore(scoreStr) {
     const parts = (scoreStr || '').split('-').map(s => parseInt(s.trim()));
     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return { games1: parts[0], games2: parts[1] };
     return null;
+}
+
+function compareRanking(a, b) {
+    const diff = (b.GG || 0) - (a.GG || 0);
+    if (diff !== 0) return diff;
+    const jj = (b.JJ || 0) - (a.JJ || 0);
+    if (jj !== 0) return jj;
+    return (a.nombre || '').toLowerCase().localeCompare((b.nombre || '').toLowerCase());
 }
 
 // ── Auth ──
@@ -614,36 +635,74 @@ async function saveDrawPartido() {
     if (editingDrawId) {
         const old = allPartidos.find(p => p.id === editingDrawId);
         const batch = writeBatch(db);
-        const hasScore = document.getElementById('ds1');
-        const g1 = hasScore ? drawScore1 : null;
-        const g2 = hasScore ? drawScore2 : null;
-        const scoreStr = hasScore ? drawScore1 + '-' + drawScore2 : '';
+        const hasScoreUI = !!document.getElementById('ds1');
+        const newG1 = hasScoreUI ? drawScore1 : 0;
+        const newG2 = hasScoreUI ? drawScore2 : 0;
+        const newScoreValid = newG1 > 0 || newG2 > 0;
         const oldG1 = (old && old.games1 !== null) ? old.games1 : 0;
         const oldG2 = (old && old.games1 !== null) ? old.games2 : 0;
-        const newG1 = hasScore ? drawScore1 : 0;
-        const newG2 = hasScore ? drawScore2 : 0;
+        const oldScoreValid = old && old.games1 !== null && (oldG1 > 0 || oldG2 > 0);
+        const playersChanged = old && (old.p1a_id !== p1a || old.p1b_id !== p1b || old.p2c_id !== p2c || old.p2d_id !== p2d);
+        const scoreChanged = oldScoreValid !== newScoreValid || (oldScoreValid && newScoreValid && (oldG1 !== newG1 || oldG2 !== newG2));
+        const needsUpdate = playersChanged || scoreChanged;
+
+        if (!needsUpdate) {
+            toast('No hay cambios para guardar', 'info');
+            hideLoading();
+            return;
+        }
+
+        const scoreStr = newScoreValid ? newG1 + '-' + newG2 : (oldScoreValid ? oldG1 + '-' + oldG2 : '');
 
         const jgDelta = {};
-        if (old && old.games1 !== null) {
+        const jjDelta = {};
+        if (oldScoreValid) {
             jgDelta[old.p1a_id] = (jgDelta[old.p1a_id] || 0) - oldG1;
             jgDelta[old.p1b_id] = (jgDelta[old.p1b_id] || 0) - oldG1;
             jgDelta[old.p2c_id] = (jgDelta[old.p2c_id] || 0) - oldG2;
             jgDelta[old.p2d_id] = (jgDelta[old.p2d_id] || 0) - oldG2;
+            jjDelta[old.p1a_id] = (jjDelta[old.p1a_id] || 0) - 1;
+            jjDelta[old.p1b_id] = (jjDelta[old.p1b_id] || 0) - 1;
+            jjDelta[old.p2c_id] = (jjDelta[old.p2c_id] || 0) - 1;
+            jjDelta[old.p2d_id] = (jjDelta[old.p2d_id] || 0) - 1;
         }
-        if (hasScore) {
+        if (newScoreValid) {
             jgDelta[p1a] = (jgDelta[p1a] || 0) + newG1;
             jgDelta[p1b] = (jgDelta[p1b] || 0) + newG1;
             jgDelta[p2c] = (jgDelta[p2c] || 0) + newG2;
             jgDelta[p2d] = (jgDelta[p2d] || 0) + newG2;
+            jjDelta[p1a] = (jjDelta[p1a] || 0) + 1;
+            jjDelta[p1b] = (jjDelta[p1b] || 0) + 1;
+            jjDelta[p2c] = (jjDelta[p2c] || 0) + 1;
+            jjDelta[p2d] = (jjDelta[p2d] || 0) + 1;
         }
         for (const [playerId, delta] of Object.entries(jgDelta)) {
-            if (delta !== 0) batch.update(doc(db, 'jugadores', playerId), { GG: increment(delta) });
+            const update = {};
+            if (delta !== 0) update.GG = increment(delta);
+            if (jjDelta[playerId] !== undefined && jjDelta[playerId] !== 0) {
+                const currentPlayer = allJugadores.find(j => j.id === playerId);
+                const currentJJ = (currentPlayer ? currentPlayer.JJ : 0) || 0; // Obtener el JJ actual del jugador
+                let actualDeltaJJ = jjDelta[playerId];
+                if (currentJJ + actualDeltaJJ < 0) {
+                    actualDeltaJJ = -currentJJ; // Ajustar el delta para que el JJ final sea 0
+                }
+                if (actualDeltaJJ !== 0) { // Solo aplicar si el delta ajustado no es cero
+                    update.JJ = increment(actualDeltaJJ);
+                }
+            }
+            if (Object.keys(update).length > 0) batch.update(doc(db, 'jugadores', playerId), update);
         }
 
-        batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), {
+        const matchUpdate = {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
-            pareja1_nombre, pareja2_nombre, score: scoreStr, games1: g1, games2: g2, fecha: new Date()
-        });
+            pareja1_nombre, pareja2_nombre, fecha: new Date()
+        };
+        if (newScoreValid || oldScoreValid) {
+            matchUpdate.score = scoreStr;
+            matchUpdate.games1 = newScoreValid ? newG1 : null;
+            matchUpdate.games2 = newScoreValid ? newG2 : null;
+        }
+        batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), matchUpdate);
         showLoading('Actualizando partido...');
         try {
             await batch.commit();
@@ -657,7 +716,6 @@ async function saveDrawPartido() {
             hideLoading();
         }
     } else {
-        const ref = doc(collection(db, 'partidos_eliminatoria'));
         await addDoc(collection(db, 'partidos_eliminatoria'), {
             p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
             pareja1_nombre, pareja2_nombre, score: '', games1: null, games2: null, fecha: new Date()
@@ -678,10 +736,31 @@ async function deleteDrawPartido(id) {
     try {
         const batch = writeBatch(db);
         if (p.games1 !== null) {
-            if (p.p1a_id) batch.update(doc(db, 'jugadores', p.p1a_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-            if (p.p1b_id) batch.update(doc(db, 'jugadores', p.p1b_id), { GG: increment(-(p.games1 || 0)), JJ: increment(-1) });
-            if (p.p2c_id) batch.update(doc(db, 'jugadores', p.p2c_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
-            if (p.p2d_id) batch.update(doc(db, 'jugadores', p.p2d_id), { GG: increment(-(p.games2 || 0)), JJ: increment(-1) });
+            const ggDeltaP1 = -(p.games1 || 0);
+            const ggDeltaP2 = -(p.games2 || 0);
+
+            const updates = {};
+
+            // Helper para construir las actualizaciones de jugador
+            const buildPlayerUpdate = (playerId, ggDelta) => {
+                const update = { GG: increment(ggDelta) };
+                const adjustedJJDelta = adjustAndIncrementJJ(playerId, -1);
+                if (adjustedJJDelta !== 0) {
+                    update.JJ = increment(adjustedJJDelta);
+                }
+                return update;
+            };
+
+            if (p.p1a_id) updates[p.p1a_id] = buildPlayerUpdate(p.p1a_id, ggDeltaP1);
+            if (p.p1b_id) updates[p.p1b_id] = buildPlayerUpdate(p.p1b_id, ggDeltaP1);
+            if (p.p2c_id) updates[p.p2c_id] = buildPlayerUpdate(p.p2c_id, ggDeltaP2);
+            if (p.p2d_id) updates[p.p2d_id] = buildPlayerUpdate(p.p2d_id, ggDeltaP2);
+
+            for (const playerId in updates) {
+                if (Object.keys(updates[playerId]).length > 0) {
+                    batch.update(doc(db, 'jugadores', playerId), updates[playerId]);
+                }
+            }
         }
         batch.delete(doc(db, 'partidos_eliminatoria', id));
         await batch.commit();
@@ -870,7 +949,7 @@ function renderCuartosAdmin() {
 async function generarCuartos() {
     showLoading('Generando cuartos...');
     try {
-        const sorted = [...allJugadores].sort((a, b) => (b.GG || 0) - (a.GG || 0));
+        const sorted = [...allJugadores].sort(compareRanking);
         if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); hideLoading(); return; }
         const top16 = sorted.slice(0, 16);
         const grupos = [
@@ -907,6 +986,8 @@ async function regenerarCuartos() {
     try {
         const batch = writeBatch(db);
         allCuartos.forEach(c => batch.delete(doc(db, 'cuartos', c.id)));
+        allSemis.forEach(s => batch.delete(doc(db, 'semifinales', s.id)));
+        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
         await batch.commit();
         await refreshData();
         await generarCuartos();
@@ -925,6 +1006,13 @@ async function saveCuarto(id) {
         await updateDoc(doc(db, 'cuartos', id), { score, ganador });
         toast('Cuarto guardado', 'success');
         await refreshData();
+        const completos = allCuartos.filter(c => c.ganador);
+        if (completos.length === 4) {
+            showLoading('Generando semifinales...');
+            await generarSemis();
+            await refreshData();
+            toast('Semifinales generadas automáticamente', 'success');
+        }
     } catch (e) {
         toast('Error al guardar', 'error');
         console.error(e);

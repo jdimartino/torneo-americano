@@ -15,11 +15,11 @@ const db = getFirestore(app);
 
 async function resetGG() {
   const snap = await getDocs(collection(db, 'jugadores'));
-  console.log(`Reseteando JJ y GG en ${snap.size} jugadores...`);
+  console.log(`Reseteando GG en ${snap.size} jugadores...`);
   for (const d of snap.docs) {
-    await updateDoc(doc(db, 'jugadores', d.id), { JJ: 0, GG: 0 });
+    await updateDoc(doc(db, 'jugadores', d.id), { GG: 0 });
   }
-  console.log(`JJ y GG reseteados a 0 en ${snap.size} jugadores.`);
+  console.log(`GG reseteado a 0 en ${snap.size} jugadores.`);
 }
 
 resetGG().catch(e => { console.error(e); process.exit(1); });
