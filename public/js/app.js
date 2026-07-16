@@ -43,10 +43,14 @@ function formatDate(ts) {
 }
 
 function rankBadge(pos) {
-    if (pos === 1) return '<span class="rank-badge gold">1</span>';
-    if (pos === 2) return '<span class="rank-badge silver">2</span>';
-    if (pos === 3) return '<span class="rank-badge bronze">3</span>';
+    if (pos <= 16) return '<span class="rank-badge qualify">' + pos + '</span>';
     return '<span class="rank-badge">' + pos + '</span>';
+}
+
+function parseScore(scoreStr) {
+    const parts = (scoreStr || '').split('-').map(s => parseInt(s.trim()));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return { games1: parts[0], games2: parts[1] };
+    return null;
 }
 
 // ── Load All Data ──
@@ -78,12 +82,15 @@ function renderPosiciones() {
     }
     el.innerHTML =
         '<table>' +
-        '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
+        '<thead><tr><th class="col-pos">#</th><th class="col-player"><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
         '<tbody>' +
         [...allJugadores].sort(compareRanking).map((j, i) =>
             '<tr>' +
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
-            '<td>' + esc(shortName(j)) + '</td>' +
+            '<td class="col-player">' +
+                '<button class="player-link" onclick="showPlayerMatches(\'' + j.id + '\')"><span class="pl-name">' + esc(shortName(j)) + '</span><span class="pl-icon material-symbols-outlined">chevron_right</span></button>' +
+                (j.cancha ? '<div style="font-size:0.6rem;color:var(--on-surface-variant-50);">Cancha ' + j.cancha + (j.lote ? ' · Lote ' + j.lote : '') + '</div>' : '') +
+                '</td>' +
             '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
             '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +
             '</tr>'
@@ -92,6 +99,123 @@ function renderPosiciones() {
         '</table>' +
         '<div style="font-size:0.65rem;color:var(--on-surface-variant-40);text-align:center;margin-top:0.5rem;">JJ = Juegos Jugados &middot; GG = Juegos Ganados</div>';
 }
+
+// ── Player Match History ──
+function getPlayerMatches(playerId) {
+    const player = allJugadores.find(j => j.id === playerId);
+    if (!player) return [];
+    const playerName = shortName(player);
+    const matches = [];
+
+    allPartidos.forEach(p => {
+        const inPair1 = p.p1a_id === playerId || p.p1b_id === playerId;
+        const inPair2 = p.p2c_id === playerId || p.p2d_id === playerId;
+        if (inPair1 || inPair2) matches.push({ ...p, matchType: 'eliminatoria', playerInPair1: inPair1 });
+    });
+
+    allCuartos.forEach(c => {
+        const inPair1 = c.pareja1_id_a === playerId || c.pareja1_id_b === playerId;
+        const inPair2 = c.pareja2_id_a === playerId || c.pareja2_id_b === playerId;
+        if (inPair1 || inPair2) matches.push({ ...c, matchType: 'cuartos', playerInPair1: inPair1 });
+    });
+
+    allSemis.forEach(s => {
+        const inPair1 = s.pareja1_nombre && s.pareja1_nombre.includes(playerName);
+        const inPair2 = s.pareja2_nombre && s.pareja2_nombre.includes(playerName);
+        if (inPair1 || inPair2) matches.push({ ...s, matchType: 'semifinal', playerInPair1: inPair1 });
+    });
+
+    allFinales.forEach(f => {
+        const inPair1 = f.pareja1_nombre && f.pareja1_nombre.includes(playerName);
+        const inPair2 = f.pareja2_nombre && f.pareja2_nombre.includes(playerName);
+        if (inPair1 || inPair2) matches.push({ ...f, matchType: 'final', playerInPair1: inPair1 });
+    });
+
+    matches.sort((a, b) => {
+        const da = a.fecha ? (a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha)) : new Date(0);
+        const db = b.fecha ? (b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha)) : new Date(0);
+        return db - da;
+    });
+
+    return matches;
+}
+
+function renderPlayerMatchItem(m) {
+    const myPair = m.playerInPair1 ? 1 : 2;
+    const myTeamClass = myPair === 1 ? 'team-blue' : 'team-gold';
+    const oppTeamClass = myPair === 1 ? 'team-gold' : 'team-blue';
+    const myName = myPair === 1 ? m.pareja1_nombre : m.pareja2_nombre;
+    const oppName = myPair === 1 ? m.pareja2_nombre : m.pareja1_nombre;
+
+    const roundLabel = m.matchType === 'eliminatoria' ? 'Eliminatoria'
+        : m.matchType === 'cuartos' ? 'Cuartos de Final'
+        : m.matchType === 'semifinal' ? 'Semifinal'
+        : 'Gran Final';
+
+    let s1, s2, state1, state2;
+    if (m.matchType === 'eliminatoria') {
+        s1 = m.games1 != null ? m.games1 : 0;
+        s2 = m.games2 != null ? m.games2 : 0;
+    } else {
+        const parsed = parseScore(m.score);
+        if (parsed) { s1 = parsed.games1; s2 = parsed.games2; }
+        else { s1 = 0; s2 = 0; }
+    }
+
+    if (m.matchType === 'eliminatoria') {
+        if (s1 > s2) { state1 = 'state-win'; state2 = 'state-lose'; }
+        else if (s2 > s1) { state1 = 'state-lose'; state2 = 'state-win'; }
+        else { state1 = 'state-tie'; state2 = 'state-tie'; }
+    } else {
+        if (m.ganador === 'pareja1') { state1 = 'state-win'; state2 = 'state-lose'; }
+        else if (m.ganador === 'pareja2') { state1 = 'state-lose'; state2 = 'state-win'; }
+        else { state1 = 'state-tie'; state2 = 'state-tie'; }
+    }
+
+    const myState = myPair === 1 ? state1 : state2;
+    const oppState = myPair === 1 ? state2 : state1;
+    const myScore = myPair === 1 ? s1 : s2;
+    const oppScore = myPair === 1 ? s2 : s1;
+
+    return '<div class="player-match-item resultado-card">' +
+        '<div class="match-round">' + roundLabel + '</div>' +
+        '<div class="match-pair-row">' +
+        '<div class="match-pair-name ' + myTeamClass + ' ' + myState + '">' + esc(fixNames(myName || '')) + '</div>' +
+        '<div class="match-pair-score ' + myTeamClass + ' ' + myState + '">' + myScore + '</div>' +
+        '</div>' +
+        '<div class="match-pair-divider"></div>' +
+        '<div class="match-pair-row">' +
+        '<div class="match-pair-name ' + oppTeamClass + ' ' + oppState + '">' + esc(fixNames(oppName || '')) + '</div>' +
+        '<div class="match-pair-score ' + oppTeamClass + ' ' + oppState + '">' + oppScore + '</div>' +
+        '</div>' +
+        (m.fecha ? '<div class="r-meta"><span class="r-fecha">' + formatDate(m.fecha) + '</span></div>' : '') +
+        '</div>';
+}
+
+window.showPlayerMatches = function(playerId) {
+    const player = allJugadores.find(j => j.id === playerId);
+    if (!player) return;
+    const matches = getPlayerMatches(playerId);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+        '<div class="modal modal-wide">' +
+        '<div class="player-match-header">' +
+        '<span class="modal-title">Partidos de ' + esc(shortName(player)) + '</span>' +
+        '<button class="modal-close-btn" id="pm-close">&times;</button>' +
+        '</div>' +
+        (matches.length
+            ? '<div class="player-match-list">' + matches.map(renderPlayerMatchItem).join('') + '</div>'
+            : '<div class="player-match-empty">Aún no tiene partidos registrados</div>'
+        ) +
+        '</div>';
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#pm-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+};
 
 // ── Resultados ──
 function renderResultados() {
@@ -267,7 +391,7 @@ function renderFinales() {
 // ── Tab Switching ──
 // Los datos ya están cargados (loadAllData se ejecutó en init).
 // El cambio de tab es instantáneo: solo renderiza la tab solicitada.
-window.showTab = function(tabId) {
+function _renderTab(tabId) {
     document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     const tabBtn = document.querySelector('[data-tab="' + tabId + '"]');
@@ -281,7 +405,17 @@ window.showTab = function(tabId) {
         case 'semifinales': renderSemifinales(); break;
         case 'finales': renderFinales(); break;
     }
+}
+
+window.showTab = function(tabId) {
+    history.pushState({ tab: tabId }, '', '#' + tabId);
+    _renderTab(tabId);
 };
+
+window.addEventListener('popstate', () => {
+    const tab = (history.state && history.state.tab) || location.hash.replace('#', '') || 'posiciones';
+    _renderTab(tab);
+});
 
 // ── Tab Scroll Indicator ──
 function setupTabScroll() {
@@ -305,8 +439,9 @@ async function init() {
     try {
         document.getElementById('posiciones').innerHTML = loadingHTML;
         await loadAllData();
-        renderPosiciones();
-        document.querySelector('[data-tab="posiciones"]').click();
+        const initialTab = location.hash.replace('#', '') || 'posiciones';
+        history.replaceState({ tab: initialTab }, '', '#' + initialTab);
+        _renderTab(initialTab);
         setupTabScroll();
     } catch (e) {
         console.error('Error loading initial data:', e);

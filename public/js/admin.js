@@ -98,9 +98,7 @@ function compareRanking(a, b) {
 }
 
 function rankBadge(pos) {
-    if (pos === 1) return '<span class="rank-badge gold">1</span>';
-    if (pos === 2) return '<span class="rank-badge silver">2</span>';
-    if (pos === 3) return '<span class="rank-badge bronze">3</span>';
+    if (pos <= 16) return '<span class="rank-badge qualify">' + pos + '</span>';
     return '<span class="rank-badge">' + pos + '</span>';
 }
 
@@ -128,10 +126,13 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('login-container-wrapper').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
         setupTabScroll();
-        panelLoading(document.getElementById('panel-jugadores'), 'Cargando jugadores...');
+        const initialPanel = location.hash.replace('#', '') || 'jugadores';
+        _switchPanel(initialPanel);
+        panelLoading(document.getElementById('panel-' + initialPanel), 'Cargando...');
         await loadData();
         dataLoaded = true;
-        renderPanel('jugadores');
+        history.replaceState({ panel: initialPanel }, '', '#' + initialPanel);
+        _switchPanel(initialPanel);
     } else {
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('login-container-wrapper').style.display = 'block';
@@ -172,7 +173,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 document.getElementById('logout-btn').addEventListener('click', async () => { await signOut(auth); });
 
 // ── Tab Navigation ──
-window.showPanel = function(panelId) {
+function _switchPanel(panelId) {
     document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.admin-panel').forEach(el => el.classList.remove('active'));
     const btn = document.querySelector('[data-panel="' + panelId + '"]');
@@ -181,7 +182,17 @@ window.showPanel = function(panelId) {
     if (content) content.classList.add('active');
     if (!dataLoaded) return;
     renderPanel(panelId);
+}
+
+window.showPanel = function(panelId) {
+    history.pushState({ panel: panelId }, '', '#' + panelId);
+    _switchPanel(panelId);
 };
+
+window.addEventListener('popstate', () => {
+    const panel = (history.state && history.state.panel) || location.hash.replace('#', '') || 'jugadores';
+    _switchPanel(panel);
+});
 
 // ── Data ──
 async function loadData() {
@@ -236,6 +247,20 @@ function renderJugadores() {
         '<div class="form-group"><label>Apellidos</label><input type="text" id="j-apellidos" placeholder="Apellidos"></div>' +
         '</div>' +
         '<div class="form-group"><label>Categoría</label><input type="text" id="j-categoria" placeholder="Categoría"></div>' +
+        '<div class="form-row">' +
+        '<div class="form-group"><label>Cancha</label><select id="j-cancha">' +
+        '<option value="">—</option>' +
+        '<option value="1">Cancha 1</option>' +
+        '<option value="2">Cancha 2</option>' +
+        '<option value="3">Cancha 3</option>' +
+        '</select></div>' +
+        '<div class="form-group"><label>Lote</label><select id="j-lote">' +
+        '<option value="">—</option>' +
+        '<option value="1">Lote 1</option>' +
+        '<option value="2">Lote 2</option>' +
+        '<option value="3">Lote 3</option>' +
+        '</select></div>' +
+        '</div>' +
         '<div class="form-row">' +
         '<div class="form-group"><label>Teléfono</label><input type="tel" id="j-telefono" placeholder="Teléfono"></div>' +
         '<div class="form-group"><label>Email</label><input type="email" id="j-email" placeholder="Email"></div>' +
@@ -314,6 +339,8 @@ function renderJugadoresList() {
             '<span class="material-symbols-outlined" style="font-size:0.7rem;">sports_tennis</span> JJ: ' + (j.JJ || 0) +
             ' · GG: ' + (j.GG || 0) +
             ' · <span class="material-symbols-outlined" style="font-size:0.7rem;">confirmation_number</span> ' + (j.numero_accion || '—') +
+            (j.cancha ? ' · <span class="badge">C' + j.cancha + '</span>' : '') +
+            (j.lote ? ' <span class="badge">L' + j.lote + '</span>' : '') +
             '</div>' +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:0.4rem;">' +
@@ -337,6 +364,8 @@ async function addJugador() {
         email: document.getElementById('j-email').value.trim(),
         numero_accion: document.getElementById('j-accion').value.trim(),
         pago_recibido: document.getElementById('j-pago').checked,
+        cancha: parseInt(document.getElementById('j-cancha').value) || null,
+        lote: parseInt(document.getElementById('j-lote').value) || null,
         JJ: 0, GG: 0
     };
     if (!data.nombre || !data.apellidos) { toast('Nombre y apellidos requeridos', 'error'); return; }
@@ -363,6 +392,8 @@ function editJugador(id) {
     document.getElementById('j-email').value = j.email || '';
     document.getElementById('j-accion').value = j.numero_accion || '';
     document.getElementById('j-pago').checked = j.pago_recibido || false;
+    document.getElementById('j-cancha').value = j.cancha || '';
+    document.getElementById('j-lote').value = j.lote || '';
     const btn = document.getElementById('btn-add-jugador');
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem;">save</span> Guardar Cambios';
     btn.classList.remove('btn-primary');
@@ -377,7 +408,9 @@ function editJugador(id) {
                 telefono: document.getElementById('j-telefono').value.trim(),
                 email: document.getElementById('j-email').value.trim(),
                 numero_accion: document.getElementById('j-accion').value.trim(),
-                pago_recibido: document.getElementById('j-pago').checked
+                pago_recibido: document.getElementById('j-pago').checked,
+                cancha: parseInt(document.getElementById('j-cancha').value) || null,
+                lote: parseInt(document.getElementById('j-lote').value) || null
             });
             toast('Jugador actualizado', 'success');
             await refreshData();
@@ -551,10 +584,45 @@ function formatMatchDate(fecha) {
     } catch (e) { return ''; }
 }
 
+function applyDrawFilters() {
+    const selectIds = ['d-p1a', 'd-p1b', 'd-p2c', 'd-p2d'];
+    let filterCancha = null;
+    for (const id of selectIds) {
+        const sel = document.getElementById(id);
+        if (sel && sel.value) {
+            const player = allJugadores.find(j => j.id === sel.value);
+            if (player && player.cancha) {
+                filterCancha = player.cancha;
+                break;
+            }
+        }
+    }
+    const activos = allJugadores;
+    for (const id of selectIds) {
+        const sel = document.getElementById(id);
+        if (!sel) continue;
+        const currentVal = sel.value;
+        const filtered = filterCancha
+            ? activos.filter(j => !j.cancha || j.cancha === filterCancha)
+            : activos;
+        sel.innerHTML = '<option value="">— Seleccionar —</option>' +
+            filtered.map(j =>
+                '<option value="' + j.id + '">' +
+                (j.pago_recibido ? '' : '⚠ ') +
+                esc(shortName(j)) +
+                (j.cancha ? ' [C' + j.cancha + (j.lote ? '/L' + j.lote : '') + ']' : '') +
+                '</option>'
+            ).join('');
+        if (currentVal && filtered.some(j => j.id === currentVal)) {
+            sel.value = currentVal;
+        }
+    }
+}
+
 function renderDraw() {
     const panel = document.getElementById('panel-draw');
     const activos = [...allJugadores];
-    const opts = activos.map(j => '<option value="' + j.id + '">' + (j.pago_recibido ? '' : '⚠ ') + esc(shortName(j)) + '</option>').join('');
+    const opts = activos.map(j => '<option value="' + j.id + '">' + (j.pago_recibido ? '' : '⚠ ') + esc(shortName(j)) + (j.cancha ? ' [C' + j.cancha + (j.lote ? '/L' + j.lote : '') + ']' : '') + '</option>').join('');
 
     const isEditing = !!editingDrawId;
     const ep = isEditing ? allPartidos.find(x => x.id === editingDrawId) : null;
@@ -652,6 +720,7 @@ function renderDraw() {
             document.getElementById('d-p1b').value = ep.p1b_id || '';
             document.getElementById('d-p2c').value = ep.p2c_id || '';
             document.getElementById('d-p2d').value = ep.p2d_id || '';
+            applyDrawFilters();
         }, 50);
     }
 
@@ -665,6 +734,11 @@ function renderDraw() {
     }
     panel.querySelectorAll('[data-edit-draw]').forEach(b => b.addEventListener('click', () => { editingDrawId = b.dataset.editDraw; renderDraw(); }));
     panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delDraw)));
+
+    ['d-p1a', 'd-p1b', 'd-p2c', 'd-p2d'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', applyDrawFilters);
+    });
 
     const drawSearch = document.getElementById('draw-search');
     if (drawSearch) {
@@ -1007,12 +1081,15 @@ function renderPosiciones() {
     panel.innerHTML =
         '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">leaderboard</span> Posiciones</div>' +
         '<table>' +
-        '<thead><tr><th class="col-pos">#</th><th><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
+        '<thead><tr><th class="col-pos">#</th><th class="col-player"><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
         '<tbody>' +
         [...allJugadores].sort(compareRanking).map((j, i) =>
             '<tr>' +
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
-            '<td>' + esc(shortName(j)) + '</td>' +
+            '<td class="col-player">' +
+                '<button class="player-link" onclick="showPlayerMatches(\'' + j.id + '\')"><span class="pl-name">' + esc(shortName(j)) + '</span><span class="pl-icon material-symbols-outlined">chevron_right</span></button>' +
+                (j.cancha ? '<div style="font-size:0.6rem;color:var(--on-surface-variant-50);">Cancha ' + j.cancha + (j.lote ? ' · Lote ' + j.lote : '') + '</div>' : '') +
+                '</td>' +
             '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
             '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +
             '</tr>'
@@ -1021,6 +1098,123 @@ function renderPosiciones() {
         '</table>' +
         '<div style="font-size:0.65rem;color:var(--on-surface-variant-40);text-align:center;margin-top:0.5rem;">JJ = Juegos Jugados &middot; GG = Juegos Ganados</div>';
 }
+
+// ── Player Match History ──
+function getPlayerMatches(playerId) {
+    const player = allJugadores.find(j => j.id === playerId);
+    if (!player) return [];
+    const playerName = shortName(player);
+    const matches = [];
+
+    allPartidos.forEach(p => {
+        const inPair1 = p.p1a_id === playerId || p.p1b_id === playerId;
+        const inPair2 = p.p2c_id === playerId || p.p2d_id === playerId;
+        if (inPair1 || inPair2) matches.push({ ...p, matchType: 'eliminatoria', playerInPair1: inPair1 });
+    });
+
+    allCuartos.forEach(c => {
+        const inPair1 = c.pareja1_id_a === playerId || c.pareja1_id_b === playerId;
+        const inPair2 = c.pareja2_id_a === playerId || c.pareja2_id_b === playerId;
+        if (inPair1 || inPair2) matches.push({ ...c, matchType: 'cuartos', playerInPair1: inPair1 });
+    });
+
+    allSemis.forEach(s => {
+        const inPair1 = s.pareja1_nombre && s.pareja1_nombre.includes(playerName);
+        const inPair2 = s.pareja2_nombre && s.pareja2_nombre.includes(playerName);
+        if (inPair1 || inPair2) matches.push({ ...s, matchType: 'semifinal', playerInPair1: inPair1 });
+    });
+
+    allFinales.forEach(f => {
+        const inPair1 = f.pareja1_nombre && f.pareja1_nombre.includes(playerName);
+        const inPair2 = f.pareja2_nombre && f.pareja2_nombre.includes(playerName);
+        if (inPair1 || inPair2) matches.push({ ...f, matchType: 'final', playerInPair1: inPair1 });
+    });
+
+    matches.sort((a, b) => {
+        const da = a.fecha ? (a.fecha.toDate ? a.fecha.toDate() : new Date(a.fecha)) : new Date(0);
+        const db = b.fecha ? (b.fecha.toDate ? b.fecha.toDate() : new Date(b.fecha)) : new Date(0);
+        return db - da;
+    });
+
+    return matches;
+}
+
+function renderPlayerMatchItem(m) {
+    const myPair = m.playerInPair1 ? 1 : 2;
+    const myTeamClass = myPair === 1 ? 'team-blue' : 'team-gold';
+    const oppTeamClass = myPair === 1 ? 'team-gold' : 'team-blue';
+    const myName = myPair === 1 ? m.pareja1_nombre : m.pareja2_nombre;
+    const oppName = myPair === 1 ? m.pareja2_nombre : m.pareja1_nombre;
+
+    const roundLabel = m.matchType === 'eliminatoria' ? 'Eliminatoria'
+        : m.matchType === 'cuartos' ? 'Cuartos de Final'
+        : m.matchType === 'semifinal' ? 'Semifinal'
+        : 'Gran Final';
+
+    let s1, s2, state1, state2;
+    if (m.matchType === 'eliminatoria') {
+        s1 = m.games1 != null ? m.games1 : 0;
+        s2 = m.games2 != null ? m.games2 : 0;
+    } else {
+        const parsed = parseScore(m.score);
+        if (parsed) { s1 = parsed.games1; s2 = parsed.games2; }
+        else { s1 = 0; s2 = 0; }
+    }
+
+    if (m.matchType === 'eliminatoria') {
+        if (s1 > s2) { state1 = 'state-win'; state2 = 'state-lose'; }
+        else if (s2 > s1) { state1 = 'state-lose'; state2 = 'state-win'; }
+        else { state1 = 'state-tie'; state2 = 'state-tie'; }
+    } else {
+        if (m.ganador === 'pareja1') { state1 = 'state-win'; state2 = 'state-lose'; }
+        else if (m.ganador === 'pareja2') { state1 = 'state-lose'; state2 = 'state-win'; }
+        else { state1 = 'state-tie'; state2 = 'state-tie'; }
+    }
+
+    const myState = myPair === 1 ? state1 : state2;
+    const oppState = myPair === 1 ? state2 : state1;
+    const myScore = myPair === 1 ? s1 : s2;
+    const oppScore = myPair === 1 ? s2 : s1;
+
+    return '<div class="player-match-item resultado-card">' +
+        '<div class="match-round">' + roundLabel + '</div>' +
+        '<div class="match-pair-row">' +
+        '<div class="match-pair-name ' + myTeamClass + ' ' + myState + '">' + esc(fixNames(myName || '')) + '</div>' +
+        '<div class="match-pair-score ' + myTeamClass + ' ' + myState + '">' + myScore + '</div>' +
+        '</div>' +
+        '<div class="match-pair-divider"></div>' +
+        '<div class="match-pair-row">' +
+        '<div class="match-pair-name ' + oppTeamClass + ' ' + oppState + '">' + esc(fixNames(oppName || '')) + '</div>' +
+        '<div class="match-pair-score ' + oppTeamClass + ' ' + oppState + '">' + oppScore + '</div>' +
+        '</div>' +
+        (m.fecha ? '<div class="r-meta"><span class="r-fecha">' + formatMatchDate(m.fecha) + '</span></div>' : '') +
+        '</div>';
+}
+
+window.showPlayerMatches = function(playerId) {
+    const player = allJugadores.find(j => j.id === playerId);
+    if (!player) return;
+    const matches = getPlayerMatches(playerId);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+        '<div class="modal modal-wide">' +
+        '<div class="player-match-header">' +
+        '<span class="modal-title">Partidos de ' + esc(shortName(player)) + '</span>' +
+        '<button class="modal-close-btn" id="pm-close">&times;</button>' +
+        '</div>' +
+        (matches.length
+            ? '<div class="player-match-list">' + matches.map(renderPlayerMatchItem).join('') + '</div>'
+            : '<div class="player-match-empty">Aún no tiene partidos registrados</div>'
+        ) +
+        '</div>';
+
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#pm-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+};
 
 // ═══════════════════════════════════════════
 // CUARTOS
