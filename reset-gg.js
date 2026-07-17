@@ -14,8 +14,28 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function resetGG() {
+  const email = process.env.FB_EMAIL;
+  const password = process.env.FB_PASS;
+  if (!email || !password) {
+    console.log('Uso: FB_EMAIL=... FB_PASS=... node reset-gg.js [--confirm]');
+    console.log('Sin --confirm solo muestra qué se haría.');
+    return;
+  }
+
+  const { getAuth, signInWithEmailAndPassword } = await import('firebase/auth');
+  const auth = getAuth(app);
+  await signInWithEmailAndPassword(auth, email, password);
+
   const snap = await getDocs(collection(db, 'jugadores'));
-  console.log(`Reseteando GG en ${snap.size} jugadores...`);
+  console.log(`Se resetearía GG a 0 en ${snap.size} jugadores.`);
+
+  const confirm = process.argv.includes('--confirm');
+  if (!confirm) {
+    console.log('\nPara ejecutar: FB_EMAIL=... FB_PASS=... node reset-gg.js --confirm');
+    return;
+  }
+
+  console.log('Aplicando...');
   for (const d of snap.docs) {
     await updateDoc(doc(db, 'jugadores', d.id), { GG: 0 });
   }

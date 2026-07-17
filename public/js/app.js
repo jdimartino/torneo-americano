@@ -82,14 +82,13 @@ function renderPosiciones() {
     }
     el.innerHTML =
         '<table>' +
-        '<thead><tr><th class="col-pos">#</th><th class="col-player"><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador</th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
+        '<thead><tr><th class="col-pos">#</th><th class="col-player"><span class="material-symbols-outlined" style="font-size:0.8rem;">person</span> Jugador <span class="col-player-hint">— clic en el nombre para detalles</span></th><th class="col-stat">JJ</th><th class="col-stat">GG</th></tr></thead>' +
         '<tbody>' +
         [...allJugadores].sort(compareRanking).map((j, i) =>
             '<tr>' +
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
             '<td class="col-player">' +
                 '<button class="player-link" onclick="showPlayerMatches(\'' + j.id + '\')"><span class="pl-name">' + esc(shortName(j)) + '</span><span class="pl-icon material-symbols-outlined">chevron_right</span></button>' +
-                (j.cancha ? '<div style="font-size:0.6rem;color:var(--on-surface-variant-50);">Cancha ' + j.cancha + (j.lote ? ' · Lote ' + j.lote : '') + '</div>' : '') +
                 '</td>' +
             '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
             '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +

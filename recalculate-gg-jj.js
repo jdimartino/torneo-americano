@@ -14,34 +14,50 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 async function recalculateGGJJ() {
-  console.log('Iniciando recálculo de GG y JJ...');
+  const email = process.env.FB_EMAIL;
+  const password = process.env.FB_PASS;
+  if (!email || !password) {
+    console.log('Uso: FB_EMAIL=... FB_PASS=... node recalculate-gg-jj.js [--confirm]');
+    console.log('Sin --confirm solo muestra qué se haría.');
+    return;
+  }
+
+  const { getAuth, signInWithEmailAndPassword } = await import('firebase/auth');
+  const auth = getAuth(app);
+  await signInWithEmailAndPassword(auth, email, password);
+
+  const jugadoresSnap = await getDocs(collection(db, 'jugadores'));
+  const partidosSnap = await getDocs(collection(db, 'partidos_eliminatoria'));
+  console.log(`Se resetearía GG y JJ de ${jugadoresSnap.size} jugadores a 0.`);
+  console.log(`Se recalcularían GG y JJ desde ${partidosSnap.size} partidos.`);
+
+  const confirm = process.argv.includes('--confirm');
+  if (!confirm) {
+    console.log('\nPara ejecutar: FB_EMAIL=... FB_PASS=... node recalculate-gg-jj.js --confirm');
+    return;
+  }
 
   // 1. Resetear todos los GG y JJ de los jugadores a 0
-  const jugadoresSnap = await getDocs(collection(db, 'jugadores'));
-  console.log(`Reseteando GG y JJ en ${jugadoresSnap.size} jugadores...`);
+  console.log('\nReseteando GG y JJ...');
   for (const jugadorDoc of jugadoresSnap.docs) {
     await updateDoc(doc(db, 'jugadores', jugadorDoc.id), { GG: 0, JJ: 0 });
   }
   console.log('GG y JJ de todos los jugadores reseteado a 0.');
 
   // 2. Recorrer todos los partidos y recalcular GG y JJ
-  const partidosSnap = await getDocs(collection(db, 'partidos_eliminatoria'));
-  console.log(`Procesando ${partidosSnap.size} partidos para recalcular GG y JJ...`);
+  console.log(`Procesando ${partidosSnap.size} partidos...`);
 
   for (const partidoDoc of partidosSnap.docs) {
     const partidoData = partidoDoc.data();
     const { p1a_id, p1b_id, p2c_id, p2d_id, games1, games2 } = partidoData;
 
     if (games1 !== undefined && games2 !== undefined && games1 !== null && games2 !== null) {
-      // Incrementar GG y JJ para los jugadores de pareja1
       if (p1a_id) {
         await updateDoc(doc(db, 'jugadores', p1a_id), { GG: increment(games1), JJ: increment(1) });
       }
       if (p1b_id) {
         await updateDoc(doc(db, 'jugadores', p1b_id), { GG: increment(games1), JJ: increment(1) });
       }
-
-      // Incrementar GG y JJ para los jugadores de pareja2
       if (p2c_id) {
         await updateDoc(doc(db, 'jugadores', p2c_id), { GG: increment(games2), JJ: increment(1) });
       }

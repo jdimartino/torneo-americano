@@ -78,6 +78,20 @@ function shortName(j) {
     return firstName + ' ' + firstLast + cat;
 }
 
+function countDrawParticipations(playerId) {
+    let n = 0;
+    for (const p of allPartidos) {
+        if (p.p1a_id === playerId || p.p1b_id === playerId ||
+            p.p2c_id === playerId || p.p2d_id === playerId) n++;
+    }
+    return n;
+}
+
+function drawCountBadge(playerId) {
+    const n = countDrawParticipations(playerId);
+    return n > 0 ? ' <span class="draw-cnt">🎾 ' + n + '</span>' : '';
+}
+
 function getPlayerName(id) {
     const j = allJugadores.find(x => x.id === id);
     return j ? shortName(j) : '';
@@ -248,20 +262,6 @@ function renderJugadores() {
         '</div>' +
         '<div class="form-group"><label>Categoría</label><input type="text" id="j-categoria" placeholder="Categoría"></div>' +
         '<div class="form-row">' +
-        '<div class="form-group"><label>Cancha</label><select id="j-cancha">' +
-        '<option value="">—</option>' +
-        '<option value="1">Cancha 1</option>' +
-        '<option value="2">Cancha 2</option>' +
-        '<option value="3">Cancha 3</option>' +
-        '</select></div>' +
-        '<div class="form-group"><label>Lote</label><select id="j-lote">' +
-        '<option value="">—</option>' +
-        '<option value="1">Lote 1</option>' +
-        '<option value="2">Lote 2</option>' +
-        '<option value="3">Lote 3</option>' +
-        '</select></div>' +
-        '</div>' +
-        '<div class="form-row">' +
         '<div class="form-group"><label>Teléfono</label><input type="tel" id="j-telefono" placeholder="Teléfono"></div>' +
         '<div class="form-group"><label>Email</label><input type="email" id="j-email" placeholder="Email"></div>' +
         '</div>' +
@@ -339,8 +339,6 @@ function renderJugadoresList() {
             '<span class="material-symbols-outlined" style="font-size:0.7rem;">sports_tennis</span> JJ: ' + (j.JJ || 0) +
             ' · GG: ' + (j.GG || 0) +
             ' · <span class="material-symbols-outlined" style="font-size:0.7rem;">confirmation_number</span> ' + (j.numero_accion || '—') +
-            (j.cancha ? ' · <span class="badge">C' + j.cancha + '</span>' : '') +
-            (j.lote ? ' <span class="badge">L' + j.lote + '</span>' : '') +
             '</div>' +
             '</div>' +
             '<div style="display:flex;align-items:center;gap:0.4rem;">' +
@@ -364,8 +362,6 @@ async function addJugador() {
         email: document.getElementById('j-email').value.trim(),
         numero_accion: document.getElementById('j-accion').value.trim(),
         pago_recibido: document.getElementById('j-pago').checked,
-        cancha: parseInt(document.getElementById('j-cancha').value) || null,
-        lote: parseInt(document.getElementById('j-lote').value) || null,
         JJ: 0, GG: 0
     };
     if (!data.nombre || !data.apellidos) { toast('Nombre y apellidos requeridos', 'error'); return; }
@@ -392,8 +388,6 @@ function editJugador(id) {
     document.getElementById('j-email').value = j.email || '';
     document.getElementById('j-accion').value = j.numero_accion || '';
     document.getElementById('j-pago').checked = j.pago_recibido || false;
-    document.getElementById('j-cancha').value = j.cancha || '';
-    document.getElementById('j-lote').value = j.lote || '';
     const btn = document.getElementById('btn-add-jugador');
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem;">save</span> Guardar Cambios';
     btn.classList.remove('btn-primary');
@@ -408,9 +402,7 @@ function editJugador(id) {
                 telefono: document.getElementById('j-telefono').value.trim(),
                 email: document.getElementById('j-email').value.trim(),
                 numero_accion: document.getElementById('j-accion').value.trim(),
-                pago_recibido: document.getElementById('j-pago').checked,
-                cancha: parseInt(document.getElementById('j-cancha').value) || null,
-                lote: parseInt(document.getElementById('j-lote').value) || null
+                pago_recibido: document.getElementById('j-pago').checked
             });
             toast('Jugador actualizado', 'success');
             await refreshData();
@@ -586,34 +578,20 @@ function formatMatchDate(fecha) {
 
 function applyDrawFilters() {
     const selectIds = ['d-p1a', 'd-p1b', 'd-p2c', 'd-p2d'];
-    let filterCancha = null;
-    for (const id of selectIds) {
-        const sel = document.getElementById(id);
-        if (sel && sel.value) {
-            const player = allJugadores.find(j => j.id === sel.value);
-            if (player && player.cancha) {
-                filterCancha = player.cancha;
-                break;
-            }
-        }
-    }
     const activos = allJugadores;
     for (const id of selectIds) {
         const sel = document.getElementById(id);
         if (!sel) continue;
         const currentVal = sel.value;
-        const filtered = filterCancha
-            ? activos.filter(j => !j.cancha || j.cancha === filterCancha)
-            : activos;
         sel.innerHTML = '<option value="">— Seleccionar —</option>' +
-            filtered.map(j =>
+            activos.map(j =>
                 '<option value="' + j.id + '">' +
                 (j.pago_recibido ? '' : '⚠ ') +
                 esc(shortName(j)) +
-                (j.cancha ? ' [C' + j.cancha + (j.lote ? '/L' + j.lote : '') + ']' : '') +
+                (countDrawParticipations(j.id) > 0 ? '  (🎾 ' + countDrawParticipations(j.id) + ')' : '') +
                 '</option>'
             ).join('');
-        if (currentVal && filtered.some(j => j.id === currentVal)) {
+        if (currentVal && activos.some(j => j.id === currentVal)) {
             sel.value = currentVal;
         }
     }
@@ -622,7 +600,11 @@ function applyDrawFilters() {
 function renderDraw() {
     const panel = document.getElementById('panel-draw');
     const activos = [...allJugadores];
-    const opts = activos.map(j => '<option value="' + j.id + '">' + (j.pago_recibido ? '' : '⚠ ') + esc(shortName(j)) + (j.cancha ? ' [C' + j.cancha + (j.lote ? '/L' + j.lote : '') + ']' : '') + '</option>').join('');
+    const opts = activos.map(j =>
+        '<option value="' + j.id + '">' + (j.pago_recibido ? '' : '⚠ ') + esc(shortName(j)) +
+        (countDrawParticipations(j.id) > 0 ? '  (🎾 ' + countDrawParticipations(j.id) + ')' : '') +
+        '</option>'
+    ).join('');
 
     const isEditing = !!editingDrawId;
     const ep = isEditing ? allPartidos.find(x => x.id === editingDrawId) : null;
@@ -697,12 +679,12 @@ function renderDraw() {
             return '<div class="match-item">' +
                 '<div class="match-info">' +
                 '<div class="match-pair-row">' +
-                '<div class="match-pair-name team-blue ' + c1 + '">' + esc(fixNames(p.pareja1_nombre || '')) + '</div>' +
+                '<div class="match-pair-name team-blue ' + c1 + '">' + esc(shortName(allJugadores.find(j => j.id === p.p1a_id))) + drawCountBadge(p.p1a_id) + ' / ' + esc(shortName(allJugadores.find(j => j.id === p.p1b_id))) + drawCountBadge(p.p1b_id) + '</div>' +
                 '<div class="match-pair-score team-blue ' + c1 + '">' + s1 + '</div>' +
                 '</div>' +
                 '<div class="match-pair-divider"></div>' +
                 '<div class="match-pair-row">' +
-                '<div class="match-pair-name team-gold ' + c2 + '">' + esc(fixNames(p.pareja2_nombre || '')) + '</div>' +
+                '<div class="match-pair-name team-gold ' + c2 + '">' + esc(shortName(allJugadores.find(j => j.id === p.p2c_id))) + drawCountBadge(p.p2c_id) + ' / ' + esc(shortName(allJugadores.find(j => j.id === p.p2d_id))) + drawCountBadge(p.p2d_id) + '</div>' +
                 '<div class="match-pair-score team-gold ' + c2 + '">' + s2 + '</div>' +
                 '</div>' +
                 '<div class="match-meta">' + formatMatchDate(p.fecha) + '</div>' +
@@ -953,7 +935,7 @@ function renderResultados() {
             return '<div class="card">' +
                 '<div class="match-info">' +
                 '<div class="match-pair-row">' +
-                '<div class="match-pair-name team-blue ' + c1 + '" id="rn1-' + p.id + '">' + esc(fixNames(p.pareja1_nombre || '')) + '</div>' +
+                '<div class="match-pair-name team-blue ' + c1 + '" id="rn1-' + p.id + '">' + esc(shortName(allJugadores.find(j => j.id === p.p1a_id))) + drawCountBadge(p.p1a_id) + ' / ' + esc(shortName(allJugadores.find(j => j.id === p.p1b_id))) + drawCountBadge(p.p1b_id) + '</div>' +
                 '<div class="match-pair-score team-blue ' + c1 + '" id="rs1-' + p.id + '">' + s1 + '</div>' +
                 '<div class="match-score-ctl">' +
                 '<button class="score-btn team-blue" data-rs-id="' + p.id + '" data-team="1" data-delta="-1">−</button>' +
@@ -962,7 +944,7 @@ function renderResultados() {
                 '</div>' +
                 '<div class="match-pair-divider"></div>' +
                 '<div class="match-pair-row">' +
-                '<div class="match-pair-name team-gold ' + c2 + '" id="rn2-' + p.id + '">' + esc(fixNames(p.pareja2_nombre || '')) + '</div>' +
+                '<div class="match-pair-name team-gold ' + c2 + '" id="rn2-' + p.id + '">' + esc(shortName(allJugadores.find(j => j.id === p.p2c_id))) + drawCountBadge(p.p2c_id) + ' / ' + esc(shortName(allJugadores.find(j => j.id === p.p2d_id))) + drawCountBadge(p.p2d_id) + '</div>' +
                 '<div class="match-pair-score team-gold ' + c2 + '" id="rs2-' + p.id + '">' + s2 + '</div>' +
                 '<div class="match-score-ctl">' +
                 '<button class="score-btn team-gold" data-rs-id="' + p.id + '" data-team="2" data-delta="-1">−</button>' +
@@ -1088,7 +1070,6 @@ function renderPosiciones() {
             '<td class="col-pos">' + rankBadge(i + 1) + '</td>' +
             '<td class="col-player">' +
                 '<button class="player-link" onclick="showPlayerMatches(\'' + j.id + '\')"><span class="pl-name">' + esc(shortName(j)) + '</span><span class="pl-icon material-symbols-outlined">chevron_right</span></button>' +
-                (j.cancha ? '<div style="font-size:0.6rem;color:var(--on-surface-variant-50);">Cancha ' + j.cancha + (j.lote ? ' · Lote ' + j.lote : '') + '</div>' : '') +
                 '</td>' +
             '<td class="col-stat">' + (j.JJ || 0) + '</td>' +
             '<td class="col-stat"><strong style="color:var(--primary)">' + (j.GG || 0) + '</strong></td>' +
@@ -1344,10 +1325,14 @@ async function saveCuarto(id) {
 }
 
 async function deleteCuarto(id) {
-    if (!confirm('¿Eliminar este cuarto?')) return;
+    if (!confirm('¿Eliminar este cuarto? Se eliminarán también semifinales y final asociadas.')) return;
     showLoading('Eliminando cuarto...');
     try {
-        await deleteDoc(doc(db, 'cuartos', id));
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'cuartos', id));
+        allSemis.forEach(s => batch.delete(doc(db, 'semifinales', s.id)));
+        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
+        await batch.commit();
         toast('Cuarto eliminado', 'success');
         await refreshData();
     } catch (e) {
@@ -1436,10 +1421,13 @@ async function saveSemi(id) {
 }
 
 async function deleteSemi(id) {
-    if (!confirm('¿Eliminar esta semifinal?')) return;
+    if (!confirm('¿Eliminar esta semifinal? Se eliminará también la final asociada.')) return;
     showLoading('Eliminando semifinal...');
     try {
-        await deleteDoc(doc(db, 'semifinales', id));
+        const batch = writeBatch(db);
+        batch.delete(doc(db, 'semifinales', id));
+        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
+        await batch.commit();
         toast('Semifinal eliminada', 'success');
         await refreshData();
     } catch (e) {
