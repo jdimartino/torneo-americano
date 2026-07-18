@@ -1,0 +1,937 @@
+[
+  {
+    "id": "1KuBxof2WanT6A1LUChz",
+    "games1": null,
+    "games2": null,
+    "p1b_id": "2az3mInJt11vPxd27i67",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784326952,
+      "nanoseconds": 704000000
+    },
+    "p1a_id": "4jJJjpLsEmhwp7vfNGYM",
+    "pareja2_nombre": "Luis Camacho (6ta) / Moisés Cáceres (6ta)",
+    "p2c_id": "uPJrTninIJjNmI6QIGAE",
+    "score": "",
+    "p2d_id": "eGFVs0f44JzllJIlulSA",
+    "pareja1_nombre": "Luis Martínez (6ta) / Ivanhoe Gamarra (6ta)"
+  },
+  {
+    "id": "2BQNLveZ2LUfo8p3EOa0",
+    "games1": null,
+    "p1b_id": "KKoS2kfdlcrGKH5AxzCz",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330991,
+      "nanoseconds": 646000000
+    },
+    "games2": null,
+    "p1a_id": "heohK1cxjTf73kXKm7lT",
+    "p2c_id": "EghnxRNoT6fSQT2JwxJA",
+    "pareja2_nombre": "Tomás Hidalgo (6ta) / Warrin Vargas (5ta)",
+    "score": "",
+    "p2d_id": "yqKsZFZTnrluYNDItjQY",
+    "pareja1_nombre": "Miguel Lizarralde (6ta) / Eduardo Garcia (6ta)"
+  },
+  {
+    "id": "53qjFkMWIumlLiX6TBUJ",
+    "games1": null,
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330422,
+      "nanoseconds": 149000000
+    },
+    "p1b_id": "sl7AFai9bLJe2krHeHCn",
+    "p1a_id": "iuRn1H4i2V1jOT7vztSA",
+    "p2c_id": "DPMe68djR9d5AY5m8PYF",
+    "pareja2_nombre": "Maikel Villasmil (4ta) / German Valenzuela (6ta)",
+    "score": "",
+    "p2d_id": "OMfrUgPCf4OfGxbLAgCs",
+    "pareja1_nombre": "Rafael Solano (5ta) / Jorge Sarmiento (6ta)"
+  },
+  {
+    "id": "57ALsFgPgG7sq9yqjxBU",
+    "pareja1_nombre": "Stefano Savino (5ta) / Alben Francisquez (6ta)",
+    "p2d_id": "E7Hm5wS2Esq6BtGg4gYx",
+    "score": "",
+    "pareja2_nombre": "Rudi Cressa (5ta) / Carlos Reyes (6ta)",
+    "p2c_id": "bfWFCPHfCAS50gFXFpHZ",
+    "p1a_id": "FG99PzPbXqUlQCY6ilno",
+    "p1b_id": "wSvCkEmsMKGAjjzowtKl",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784381902,
+      "nanoseconds": 572000000
+    },
+    "games2": null,
+    "games1": null
+  },
+  {
+    "id": "8ya9ubk2hiDKhJnSBt4C",
+    "games1": null,
+    "games2": null,
+    "p1b_id": "scMpPJcl8urSCWnkU66c",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784329834,
+      "nanoseconds": 95000000
+    },
+    "p1a_id": "OMfrUgPCf4OfGxbLAgCs",
+    "pareja2_nombre": "Carlos Ramos (6ta) / Erick Calderón (6ta)",
+    "p2c_id": "m52LJzFamiUcuzW3dDu1",
+    "score": "",
+    "p2d_id": "VbFfN6K3J1Job7KEfURd",
+    "pareja1_nombre": "German Valenzuela (6ta) / Gustavo Segovia (6ta)"
+  },
+  {
+    "id": "9KfhPSAIXqhuBGF5KkhI",
+    "p1a_id": "cjgQEXoD0kvY4muHH0KS",
+    "p1b_id": "rrgJ2ZumRm78YDJsIiKH",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331157,
+      "nanoseconds": 849000000
+    },
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "Cipriano Lozada (5ta) / Luis Benezra (6ta)",
+    "p2d_id": "KKoS2kfdlcrGKH5AxzCz",
+    "score": "",
+    "p2c_id": "LhG9a7W61C7d7j6L8l2b",
+    "pareja2_nombre": "William Reyes (5ta) / Eduardo Garcia (6ta)"
+  },
+  {
+    "id": "9snCWPtvF15kb2bdYMIQ",
+    "score": "",
+    "pareja2_nombre": "Rudi Cressa (5ta) / José Useche (6ta)",
+    "p2c_id": "bfWFCPHfCAS50gFXFpHZ",
+    "pareja1_nombre": "Rafael Solano (5ta) / Cipriano Lozada (6ta)",
+    "p2d_id": "iDntdWa8xGR1JrWUSvKn",
+    "games1": null,
+    "p1a_id": "iuRn1H4i2V1jOT7vztSA",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784329495,
+      "nanoseconds": 960000000
+    },
+    "games2": null,
+    "p1b_id": "1UVr9TkHVPW47YqzOWau"
+  },
+  {
+    "id": "AvjAHvnjF6MNNjcUeLAu",
+    "pareja2_nombre": "Luis Leal (6ta) / Luis Martínez (6ta)",
+    "p2c_id": "slUwiRaN5u2tqFA2Wv5m",
+    "score": "1-3",
+    "p2d_id": "4jJJjpLsEmhwp7vfNGYM",
+    "pareja1_nombre": "Ivanhoe Gamarra (6ta) / Arturo Jimenez (6ta)",
+    "games1": 1,
+    "p1b_id": "oe95aS3Q6RMJcfiBdeyC",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784387433,
+      "nanoseconds": 799000000
+    },
+    "games2": 3,
+    "p1a_id": "2az3mInJt11vPxd27i67"
+  },
+  {
+    "id": "CXIQmsiW5xecnLxMQ9SM",
+    "pareja1_nombre": "Luis Martínez (6ta) / Axel Berasain (6ta)",
+    "p2d_id": "NgL8bOH6kGYLfQzeS9NV",
+    "score": "2-2",
+    "p2c_id": "iDntdWa8xGR1JrWUSvKn",
+    "pareja2_nombre": "José Useche (6ta) / Luis Romero (6ta)",
+    "p1a_id": "4jJJjpLsEmhwp7vfNGYM",
+    "p1b_id": "nif2cwj9q77xCNKCKJ9O",
+    "games2": 2,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784384664,
+      "nanoseconds": 509000000
+    },
+    "games1": 2
+  },
+  {
+    "id": "EH6aqAbwauGuLc95BTPR",
+    "games1": null,
+    "p1b_id": "E7Hm5wS2Esq6BtGg4gYx",
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388419,
+      "nanoseconds": 730000000
+    },
+    "p1a_id": "scMpPJcl8urSCWnkU66c",
+    "p2c_id": "wSvCkEmsMKGAjjzowtKl",
+    "pareja2_nombre": "Alben Francisquez (6ta) / Tomás Hidalgo (6ta)",
+    "score": "",
+    "p2d_id": "EghnxRNoT6fSQT2JwxJA",
+    "pareja1_nombre": "Gustavo Segovia (6ta) / Carlos Reyes (6ta)"
+  },
+  {
+    "id": "EYqmAt8Rh5JAP3DjrUZq",
+    "games2": null,
+    "p1b_id": "U6nYxUphU7XIi9729MyC",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784326574,
+      "nanoseconds": 387000000
+    },
+    "p1a_id": "nif2cwj9q77xCNKCKJ9O",
+    "games1": null,
+    "p2d_id": "gg8NenEM17dACKcpNzXw",
+    "pareja1_nombre": "Axel Berasain (6ta) / Luis Uramiare (6ta)",
+    "pareja2_nombre": "Arturo Jimenez (6ta) / Yosandel Guanare (6ta)",
+    "p2c_id": "oe95aS3Q6RMJcfiBdeyC",
+    "score": ""
+  },
+  {
+    "id": "GD8TBdJumRGSfgXIc4he",
+    "score": "",
+    "pareja2_nombre": "Yosandel Guanare (6ta) / Nuno Da (4ta)",
+    "p2c_id": "gg8NenEM17dACKcpNzXw",
+    "pareja1_nombre": "Luis Leal (4ta) / Paulo Torres (6ta)",
+    "p2d_id": "LMY3MZmGupJgt6JUFGft",
+    "games1": null,
+    "p1a_id": "2AQwOO3WqydMuBPvzyL2",
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784386019,
+      "nanoseconds": 400000000
+    },
+    "p1b_id": "mARF5P0UJopNE0jiW5V4"
+  },
+  {
+    "id": "HoEd6ENIyzHiUX5gRocu",
+    "pareja1_nombre": "José Sainea (6ta) / Paulo Torres (6ta)",
+    "p2d_id": "oe95aS3Q6RMJcfiBdeyC",
+    "score": "",
+    "pareja2_nombre": "Valeria Reyes (4ta) / Arturo Jimenez (6ta)",
+    "p2c_id": "BtuaVH8Xje6NTxjWAUgr",
+    "p1a_id": "ZKY8MRkjMxkVZ7em0TWS",
+    "games2": null,
+    "p1b_id": "mARF5P0UJopNE0jiW5V4",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784387332,
+      "nanoseconds": 935000000
+    },
+    "games1": null
+  },
+  {
+    "id": "IN6AqcmnbqOYEUwA7YtO",
+    "games1": 3,
+    "p1a_id": "slUwiRaN5u2tqFA2Wv5m",
+    "p1b_id": "iZcVibZMdEXgqx8B2ddD",
+    "games2": 1,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784381895,
+      "nanoseconds": 620000000
+    },
+    "score": "3-1",
+    "p2c_id": "2AQwOO3WqydMuBPvzyL2",
+    "pareja2_nombre": "Luis Leal (4ta) / nicolas Matjushin (6ta)",
+    "pareja1_nombre": "Luis Leal (6ta) / Ana Colmenares (3ra)",
+    "p2d_id": "ZGo3wFx7bDqfI4pOmIxt"
+  },
+  {
+    "id": "IZUnEegmi9UPLqnzzaqY",
+    "games1": null,
+    "games2": null,
+    "p1b_id": "UfPZEZR8XqCZNrvbB4Wf",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784379918,
+      "nanoseconds": 100000000
+    },
+    "p1a_id": "Rx5aR6d47BjzeBjpC2qV",
+    "p2c_id": "YpmMBWx9BidhpiKdStsR",
+    "pareja2_nombre": "Alberto Perozo (5ta) / Javier Bouquett (6ta)",
+    "score": "",
+    "p2d_id": "Wlw2e27sQk4825mi5bMn",
+    "pareja1_nombre": "Daniel Battaglini (6ta) / Willmer Valera (6ta)"
+  },
+  {
+    "id": "IfZej6QhVIQo4Zd09y3C",
+    "p2d_id": "E7Hm5wS2Esq6BtGg4gYx",
+    "pareja1_nombre": "Erick Calderón (6ta) / Otto Sarduy (7ma)",
+    "pareja2_nombre": "German Valenzuela (6ta) / Carlos Reyes (6ta)",
+    "p2c_id": "OMfrUgPCf4OfGxbLAgCs",
+    "score": "",
+    "p1b_id": "pIUrvc6sIexUp7A1Cvos",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784329229,
+      "nanoseconds": 286000000
+    },
+    "games2": null,
+    "p1a_id": "VbFfN6K3J1Job7KEfURd",
+    "games1": null
+  },
+  {
+    "id": "JuYTZYc8GDfxMsR5nua6",
+    "p1b_id": "St8IQfuepxJ5kOeV3d88",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388762,
+      "nanoseconds": 582000000
+    },
+    "games2": null,
+    "p1a_id": "1UVr9TkHVPW47YqzOWau",
+    "games1": null,
+    "p2d_id": "afuv098vXGoVhW8X70Zv",
+    "pareja1_nombre": "Cipriano Lozada (6ta) / Camila DeMichele (4ta)",
+    "p2c_id": "sl7AFai9bLJe2krHeHCn",
+    "pareja2_nombre": "Jorge Sarmiento (6ta) / Ramiro Almeida (6ta)",
+    "score": ""
+  },
+  {
+    "id": "OFw5j5c82gmPqytESe7P",
+    "p2d_id": "MlS7bH3UmwUIJOwNhAIt",
+    "pareja1_nombre": "Sergio Giuliani (6ta) / Alvaro Arevalo (6ta)",
+    "p2c_id": "iZcVibZMdEXgqx8B2ddD",
+    "pareja2_nombre": "Ana Colmenares (3ra) / Alejandro Viloria (6ta)",
+    "score": "",
+    "games2": null,
+    "p1b_id": "P5NCaitrZpaW87Jvbs2J",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784386310,
+      "nanoseconds": 508000000
+    },
+    "p1a_id": "DumvSjCSXaVKtJKqEZQB",
+    "games1": null
+  },
+  {
+    "id": "OgTzOx42dSVHcOYfOOQq",
+    "games1": null,
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388154,
+      "nanoseconds": 924000000
+    },
+    "p1b_id": "2n7BxeZrmlu29eLVzPbd",
+    "p1a_id": "ZGo3wFx7bDqfI4pOmIxt",
+    "pareja2_nombre": "Ivanhoe Gamarra (5ta) / Javi Gonzalez (6ta)",
+    "p2c_id": "ez9GkH7cbFQFMJrliwXu",
+    "score": "",
+    "p2d_id": "rJhGCujvSNUlIm2FNbH2",
+    "pareja1_nombre": "nicolas Matjushin (6ta) / Renzo Bohórquez (5ta)"
+  },
+  {
+    "id": "Q5tM02YY9qB27K1VOhts",
+    "p1a_id": "ELdn7RKXiuZvB1aItCxO",
+    "p1b_id": "BEKP8M8XBEBd0KAaa4Ne",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330558,
+      "nanoseconds": 67000000
+    },
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "Marco Pereira (5ta) / German Castro (4ta)",
+    "p2d_id": "1kTrORrVezMkeumsVJ9v",
+    "score": "",
+    "pareja2_nombre": "Cipriano Lozada (5ta) / Salvador De (5ta)",
+    "p2c_id": "cjgQEXoD0kvY4muHH0KS"
+  },
+  {
+    "id": "QsvbARwoMhp523h52BlL",
+    "p2d_id": "ez9GkH7cbFQFMJrliwXu",
+    "pareja1_nombre": "Luis Leal (4ta) / Juan Ordosgoite (5ta)",
+    "p2c_id": "sT6dUp8ITahc69NUqFCo",
+    "pareja2_nombre": "Ricardo Ramirez (5ta) / Ivanhoe Gamarra (5ta)",
+    "score": "",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784381846,
+      "nanoseconds": 604000000
+    },
+    "p1b_id": "vX71RpVy9Mhe32KmdDbi",
+    "games2": null,
+    "p1a_id": "2AQwOO3WqydMuBPvzyL2",
+    "games1": null
+  },
+  {
+    "id": "R7GFZLGuKwgRaf8wmPho",
+    "score": "1-3",
+    "pareja2_nombre": "Sergio Giuliani (6ta) / Nuno Da (4ta)",
+    "p2c_id": "DumvSjCSXaVKtJKqEZQB",
+    "pareja1_nombre": "Renzo Bohórquez (5ta) / Willmer Valera (6ta)",
+    "p2d_id": "LMY3MZmGupJgt6JUFGft",
+    "games1": 1,
+    "p1a_id": "2n7BxeZrmlu29eLVzPbd",
+    "p1b_id": "UfPZEZR8XqCZNrvbB4Wf",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784383202,
+      "nanoseconds": 613000000
+    },
+    "games2": 3
+  },
+  {
+    "id": "RYwjuzkTTAMGNgjrJWhv",
+    "p2c_id": "VfIraSIHKPETKhC2wAc0",
+    "pareja2_nombre": "Jose DeMiguel (6ta) / Enrique Reina (5ta)",
+    "score": "",
+    "p2d_id": "Vg57CrPwVNnZDM3aDT7v",
+    "pareja1_nombre": "Andres Hernandez (6ta) / Stefano Savino (5ta)",
+    "games1": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784342830,
+      "nanoseconds": 453000000
+    },
+    "games2": null,
+    "p1b_id": "FG99PzPbXqUlQCY6ilno",
+    "p1a_id": "luqSTz12vC4Syu6bihoo"
+  },
+  {
+    "id": "SMeKvpBZm3mBt51lkaWy",
+    "p1a_id": "NgL8bOH6kGYLfQzeS9NV",
+    "p1b_id": "nif2cwj9q77xCNKCKJ9O",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784387030,
+      "nanoseconds": 215000000
+    },
+    "games2": 0,
+    "games1": 4,
+    "pareja1_nombre": "Luis Romero (6ta) / Axel Berasain (6ta)",
+    "p2d_id": "afuv098vXGoVhW8X70Zv",
+    "score": "4-0",
+    "p2c_id": "ZGo3wFx7bDqfI4pOmIxt",
+    "pareja2_nombre": "nicolas Matjushin (6ta) / Ramiro Almeida (6ta)"
+  },
+  {
+    "id": "T8K9vaWW5wDo3QlbRf47",
+    "pareja1_nombre": "Orlando Peñuela (6ta) / Luis Camacho (6ta)",
+    "p2d_id": "wSvCkEmsMKGAjjzowtKl",
+    "score": "",
+    "p2c_id": "aaj8Ncfsehsusrq5myvC",
+    "pareja2_nombre": "Jose Chacon (6ta) / Alben Francisquez (6ta)",
+    "p1a_id": "bQXSZyVmi9IhJHQQesMX",
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784382540,
+      "nanoseconds": 673000000
+    },
+    "p1b_id": "uPJrTninIJjNmI6QIGAE",
+    "games1": null
+  },
+  {
+    "id": "VYFQ2YBbhu37f5vUWkHD",
+    "p2d_id": "UfPZEZR8XqCZNrvbB4Wf",
+    "pareja1_nombre": "Andres Hernandez (6ta) / Daniel Battaglini (6ta)",
+    "p2c_id": "BvLyButdmaDX5qjJeKyH",
+    "pareja2_nombre": "Victor Rodríguez (6ta) / Willmer Valera (6ta)",
+    "score": "",
+    "games2": null,
+    "p1b_id": "Rx5aR6d47BjzeBjpC2qV",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784342783,
+      "nanoseconds": 67000000
+    },
+    "p1a_id": "luqSTz12vC4Syu6bihoo",
+    "games1": null
+  },
+  {
+    "id": "VtG5Jxh5Im2xYqeRopKy",
+    "p2d_id": "BEKP8M8XBEBd0KAaa4Ne",
+    "pareja1_nombre": "Salvador De (5ta) / Daniel Battaglini (6ta)",
+    "pareja2_nombre": "Stefano Savino (5ta) / German Castro (4ta)",
+    "p2c_id": "FG99PzPbXqUlQCY6ilno",
+    "score": "",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331271,
+      "nanoseconds": 301000000
+    },
+    "games2": null,
+    "p1b_id": "Rx5aR6d47BjzeBjpC2qV",
+    "p1a_id": "1kTrORrVezMkeumsVJ9v",
+    "games1": null
+  },
+  {
+    "id": "Y2hJ4E0qxREeD077sPkn",
+    "p1a_id": "gg8NenEM17dACKcpNzXw",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784327733,
+      "nanoseconds": 767000000
+    },
+    "p1b_id": "2az3mInJt11vPxd27i67",
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "Yosandel Guanare (6ta) / Ivanhoe Gamarra (6ta)",
+    "p2d_id": "eGFVs0f44JzllJIlulSA",
+    "score": "",
+    "p2c_id": "ZKY8MRkjMxkVZ7em0TWS",
+    "pareja2_nombre": "José Sainea (6ta) / Moisés Cáceres (6ta)"
+  },
+  {
+    "id": "YaDoBxpSBNYFxV2vaYbk",
+    "p1a_id": "heohK1cxjTf73kXKm7lT",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388630,
+      "nanoseconds": 407000000
+    },
+    "games2": 2,
+    "p1b_id": "MlS7bH3UmwUIJOwNhAIt",
+    "games1": 2,
+    "pareja1_nombre": "Miguel Lizarralde (6ta) / Alejandro Viloria (6ta)",
+    "p2d_id": "13ZZ2X1vwzY7yHV1Xo8i",
+    "score": "2-2",
+    "pareja2_nombre": "Ernesto Rodríguez (6ta) / Antonio Miralles (6ta)",
+    "p2c_id": "PbpocIejwWDg0uwOZeHW"
+  },
+  {
+    "id": "YthQV0PBthwDRDwUivx1",
+    "p1b_id": "VbFfN6K3J1Job7KEfURd",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784387968,
+      "nanoseconds": 103000000
+    },
+    "games2": 2,
+    "p1a_id": "ELdn7RKXiuZvB1aItCxO",
+    "games1": 2,
+    "p2d_id": "Wlw2e27sQk4825mi5bMn",
+    "pareja1_nombre": "Marco Pereira (5ta) / Erick Calderón (6ta)",
+    "p2c_id": "rJhGCujvSNUlIm2FNbH2",
+    "pareja2_nombre": "Javi Gonzalez (6ta) / Javier Bouquett (6ta)",
+    "score": "2-2"
+  },
+  {
+    "id": "d7e0pq2mqUFnRJxcipup",
+    "games1": null,
+    "p1a_id": "LMY3MZmGupJgt6JUFGft",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784329632,
+      "nanoseconds": 623000000
+    },
+    "p1b_id": "DumvSjCSXaVKtJKqEZQB",
+    "games2": null,
+    "score": "",
+    "p2c_id": "P5NCaitrZpaW87Jvbs2J",
+    "pareja2_nombre": "Alvaro Arevalo (6ta) / Alberto Perozo (5ta)",
+    "pareja1_nombre": "Nuno Da (4ta) / Sergio Giuliani (6ta)",
+    "p2d_id": "YpmMBWx9BidhpiKdStsR"
+  },
+  {
+    "id": "dnw16vwGXRdKIjQ9n2jb",
+    "p1a_id": "vX71RpVy9Mhe32KmdDbi",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784326276,
+      "nanoseconds": 675000000
+    },
+    "p1b_id": "2n7BxeZrmlu29eLVzPbd",
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "Juan Ordosgoite (5ta) / Renzo Bohórquez (5ta)",
+    "p2d_id": "bSFKlBkBS70ia2Zcrzml",
+    "score": "",
+    "p2c_id": "ez9GkH7cbFQFMJrliwXu",
+    "pareja2_nombre": "Ivanhoe Gamarra (5ta) / Jose Acosta (5ta)"
+  },
+  {
+    "id": "eBmZor31TRIvYVmULjtd",
+    "p1a_id": "Rtq5NT6waMAgPAsd8Y8Q",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330290,
+      "nanoseconds": 417000000
+    },
+    "p1b_id": "iDntdWa8xGR1JrWUSvKn",
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "Jose DiMichele (6ta) / José Useche (6ta)",
+    "p2d_id": "1UVr9TkHVPW47YqzOWau",
+    "score": "",
+    "p2c_id": "bQXSZyVmi9IhJHQQesMX",
+    "pareja2_nombre": "Orlando Peñuela (6ta) / Cipriano Lozada (6ta)"
+  },
+  {
+    "id": "ekV1lJYTUP2iQKnWieU8",
+    "p2d_id": "vX71RpVy9Mhe32KmdDbi",
+    "pareja1_nombre": "Luis Leal (6ta) / Renzo Bohórquez (5ta)",
+    "p2c_id": "bSFKlBkBS70ia2Zcrzml",
+    "pareja2_nombre": "Jose Acosta (5ta) / Juan Ordosgoite (5ta)",
+    "score": "",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784327105,
+      "nanoseconds": 702000000
+    },
+    "p1b_id": "2n7BxeZrmlu29eLVzPbd",
+    "games2": null,
+    "p1a_id": "slUwiRaN5u2tqFA2Wv5m",
+    "games1": null
+  },
+  {
+    "id": "f9t3hmRpF5iMpuLb7Wn8",
+    "pareja2_nombre": "Miguel Curvelo (6ta) / Camila DeMichele (4ta)",
+    "p2c_id": "vrZ3QYPIukKBTRgvvDCC",
+    "score": "",
+    "p2d_id": "St8IQfuepxJ5kOeV3d88",
+    "pareja1_nombre": "Isaac González (6ta) / Ricardo Portal (6ta)",
+    "games1": null,
+    "p1b_id": "JgJqhZqKI9MTIURpsFZC",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784384627,
+      "nanoseconds": 666000000
+    },
+    "games2": null,
+    "p1a_id": "eJfFJTdcrFSarObrJyaJ"
+  },
+  {
+    "id": "fYF130XftgDp4lYzaVy9",
+    "score": "",
+    "pareja2_nombre": "Alvaro Arevalo (6ta) / Francisco Arteaga (6ta)",
+    "p2c_id": "P5NCaitrZpaW87Jvbs2J",
+    "pareja1_nombre": "Carlos Ramos (6ta) / Jorge Sarmiento (6ta)",
+    "p2d_id": "EnlBeqB1XI7QE3NZlhJ2",
+    "games1": null,
+    "p1a_id": "m52LJzFamiUcuzW3dDu1",
+    "p1b_id": "sl7AFai9bLJe2krHeHCn",
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784329723,
+      "nanoseconds": 264000000
+    }
+  },
+  {
+    "id": "fq8vf6GApHzlFUSRMX1Y",
+    "games1": 2,
+    "p1a_id": "BtuaVH8Xje6NTxjWAUgr",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784386650,
+      "nanoseconds": 760000000
+    },
+    "games2": 2,
+    "p1b_id": "U6nYxUphU7XIi9729MyC",
+    "score": "2-2",
+    "p2c_id": "ar2PUDCMEE0HPn4eXwVS",
+    "pareja2_nombre": "Rossana Garcia (4ta) / José Sainea (6ta)",
+    "pareja1_nombre": "Valeria Reyes (4ta) / Luis Uramiare (6ta)",
+    "p2d_id": "ZKY8MRkjMxkVZ7em0TWS"
+  },
+  {
+    "id": "hTjDZwgCqDsHl90GQH7u",
+    "games2": null,
+    "p1b_id": "ELdn7RKXiuZvB1aItCxO",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784389097,
+      "nanoseconds": 569000000
+    },
+    "p1a_id": "LhG9a7W61C7d7j6L8l2b",
+    "games1": null,
+    "p2d_id": "ZGo3wFx7bDqfI4pOmIxt",
+    "pareja1_nombre": "William Reyes (5ta) / Marco Pereira (5ta)",
+    "p2c_id": "iuRn1H4i2V1jOT7vztSA",
+    "pareja2_nombre": "Rafael Solano (5ta) / nicolas Matjushin (6ta)",
+    "score": ""
+  },
+  {
+    "id": "ipidu0YINeMaDeQrSSF0",
+    "games1": 2,
+    "p1a_id": "eJfFJTdcrFSarObrJyaJ",
+    "p1b_id": "PbpocIejwWDg0uwOZeHW",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784385849,
+      "nanoseconds": 726000000
+    },
+    "games2": 2,
+    "score": "2-2",
+    "pareja2_nombre": "Antonio Miralles (6ta) / Jose DeMiguel (6ta)",
+    "p2c_id": "13ZZ2X1vwzY7yHV1Xo8i",
+    "pareja1_nombre": "Isaac González (6ta) / Ernesto Rodríguez (6ta)",
+    "p2d_id": "VfIraSIHKPETKhC2wAc0"
+  },
+  {
+    "id": "j9H7iBOrBkI7VaDf6wEB",
+    "p2d_id": "uPJrTninIJjNmI6QIGAE",
+    "pareja1_nombre": "Daniel Rodriguez (5ta) / Moisés Cáceres (6ta)",
+    "pareja2_nombre": "Jose Acosta (5ta) / Luis Camacho (6ta)",
+    "p2c_id": "bSFKlBkBS70ia2Zcrzml",
+    "score": "",
+    "games2": null,
+    "p1b_id": "eGFVs0f44JzllJIlulSA",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784327991,
+      "nanoseconds": 532000000
+    },
+    "p1a_id": "IYCWDDwF1GrE1Dixjwir",
+    "games1": null
+  },
+  {
+    "id": "kI5Gqr879sheG1ovpth7",
+    "p1a_id": "BEKP8M8XBEBd0KAaa4Ne",
+    "p1b_id": "PbpocIejwWDg0uwOZeHW",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331901,
+      "nanoseconds": 241000000
+    },
+    "games2": null,
+    "games1": null,
+    "pareja1_nombre": "German Castro (4ta) / Ernesto Rodríguez (6ta)",
+    "p2d_id": "JgJqhZqKI9MTIURpsFZC",
+    "score": "",
+    "p2c_id": "Wlw2e27sQk4825mi5bMn",
+    "pareja2_nombre": "Javier Bouquett (6ta) / Ricardo Portal (6ta)"
+  },
+  {
+    "id": "keLFDT8qc9wpfMLjEGmN",
+    "games1": null,
+    "p1a_id": "Rtq5NT6waMAgPAsd8Y8Q",
+    "games2": null,
+    "p1b_id": "pIUrvc6sIexUp7A1Cvos",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330235,
+      "nanoseconds": 160000000
+    },
+    "score": "",
+    "pareja2_nombre": "Jose Chacon (6ta) / Francisco Arteaga (6ta)",
+    "p2c_id": "aaj8Ncfsehsusrq5myvC",
+    "pareja1_nombre": "Jose DiMichele (6ta) / Otto Sarduy (7ma)",
+    "p2d_id": "EnlBeqB1XI7QE3NZlhJ2"
+  },
+  {
+    "id": "nOkS99GHLOQBYoWChtOO",
+    "pareja1_nombre": "Miguel Lizarralde (6ta) / Roberto Alburjas (6ta)",
+    "p2d_id": "rrgJ2ZumRm78YDJsIiKH",
+    "score": "2-2",
+    "pareja2_nombre": "Francisco Arteaga (6ta) / Luis Benezra (6ta)",
+    "p2c_id": "EnlBeqB1XI7QE3NZlhJ2",
+    "p1a_id": "heohK1cxjTf73kXKm7lT",
+    "p1b_id": "fNwFbufukyz37m2YYzOV",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784384838,
+      "nanoseconds": 468000000
+    },
+    "games2": 2,
+    "games1": 2
+  },
+  {
+    "id": "o3RAN7d5PQyoQDTLxON3",
+    "score": "3-1",
+    "p2c_id": "iZcVibZMdEXgqx8B2ddD",
+    "pareja2_nombre": "Ana Colmenares (3ra) / Camila De (4ta)",
+    "pareja1_nombre": "Valeria Reyes (4ta) / Ricardo Ramirez (5ta)",
+    "p2d_id": "St8IQfuepxJ5kOeV3d88",
+    "games1": 3,
+    "p1a_id": "BtuaVH8Xje6NTxjWAUgr",
+    "p1b_id": "sT6dUp8ITahc69NUqFCo",
+    "games2": 1,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784384967,
+      "nanoseconds": 387000000
+    }
+  },
+  {
+    "id": "oIg9YnhlxJ2U5MSTpvBC",
+    "games1": 3,
+    "games2": 1,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388497,
+      "nanoseconds": 186000000
+    },
+    "p1b_id": "fNwFbufukyz37m2YYzOV",
+    "p1a_id": "cjgQEXoD0kvY4muHH0KS",
+    "p2c_id": "Vg57CrPwVNnZDM3aDT7v",
+    "pareja2_nombre": "Enrique Reina (5ta) / Victor Rodríguez (6ta)",
+    "score": "3-1",
+    "p2d_id": "BvLyButdmaDX5qjJeKyH",
+    "pareja1_nombre": "Cipriano Lozada (5ta) / Roberto Alburjas (6ta)"
+  },
+  {
+    "id": "p6wrOrkP7n1ySFSfMXd8",
+    "score": "",
+    "p2c_id": "vrZ3QYPIukKBTRgvvDCC",
+    "pareja2_nombre": "Miguel Curvelo (6ta) / Alejandro Viloria (6ta)",
+    "pareja1_nombre": "Luis Benezra (6ta) / Roberto Alburjas (6ta)",
+    "p2d_id": "MlS7bH3UmwUIJOwNhAIt",
+    "games1": null,
+    "p1a_id": "rrgJ2ZumRm78YDJsIiKH",
+    "games2": null,
+    "p1b_id": "fNwFbufukyz37m2YYzOV",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330865,
+      "nanoseconds": 304000000
+    }
+  },
+  {
+    "id": "pS6Y2LzBlqjIpOojGxMi",
+    "p2d_id": "rrgJ2ZumRm78YDJsIiKH",
+    "pareja1_nombre": "Andres Hernandez (6ta) / Enrique Reina (5ta)",
+    "pareja2_nombre": "Warrin Vargas (5ta) / Luis Benezra (6ta)",
+    "p2c_id": "yqKsZFZTnrluYNDItjQY",
+    "score": "",
+    "games2": null,
+    "p1b_id": "Vg57CrPwVNnZDM3aDT7v",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331382,
+      "nanoseconds": 215000000
+    },
+    "p1a_id": "luqSTz12vC4Syu6bihoo",
+    "games1": null
+  },
+  {
+    "id": "qKHps1kjY8hVO0uWgUbb",
+    "pareja2_nombre": "Miguel Curvelo (6ta) / Antonio Miralles (6ta)",
+    "p2c_id": "vrZ3QYPIukKBTRgvvDCC",
+    "score": "",
+    "p2d_id": "13ZZ2X1vwzY7yHV1Xo8i",
+    "pareja1_nombre": "Alejandro Viloria (6ta) / Jose DeMiguel (6ta)",
+    "games1": null,
+    "p1b_id": "VfIraSIHKPETKhC2wAc0",
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331941,
+      "nanoseconds": 496000000
+    },
+    "p1a_id": "MlS7bH3UmwUIJOwNhAIt"
+  },
+  {
+    "id": "sbAI21glJvianqpbLt57",
+    "games2": null,
+    "p1b_id": "1kTrORrVezMkeumsVJ9v",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784331817,
+      "nanoseconds": 103000000
+    },
+    "p1a_id": "fNwFbufukyz37m2YYzOV",
+    "games1": null,
+    "p2d_id": "eJfFJTdcrFSarObrJyaJ",
+    "pareja1_nombre": "Roberto Alburjas (6ta) / Salvador De (5ta)",
+    "p2c_id": "EghnxRNoT6fSQT2JwxJA",
+    "pareja2_nombre": "Tomás Hidalgo (6ta) / Isaac González (6ta)",
+    "score": ""
+  },
+  {
+    "id": "t4qUngTLzUkKip6cGeqm",
+    "p1a_id": "JgJqhZqKI9MTIURpsFZC",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784330792,
+      "nanoseconds": 83000000
+    },
+    "games2": null,
+    "p1b_id": "BvLyButdmaDX5qjJeKyH",
+    "games1": null,
+    "pareja1_nombre": "Ricardo Portal (6ta) / Victor Rodríguez (6ta)",
+    "p2d_id": "EghnxRNoT6fSQT2JwxJA",
+    "score": "",
+    "pareja2_nombre": "Eduardo Garcia (6ta) / Tomás Hidalgo (6ta)",
+    "p2c_id": "KKoS2kfdlcrGKH5AxzCz"
+  },
+  {
+    "id": "uznypCoWkLTSxN6uaNiP",
+    "games1": null,
+    "games2": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784326344,
+      "nanoseconds": 537000000
+    },
+    "p1b_id": "rJhGCujvSNUlIm2FNbH2",
+    "p1a_id": "NgL8bOH6kGYLfQzeS9NV",
+    "pareja2_nombre": "Daniel Rodriguez (5ta) / Rossana Garcia (4ta)",
+    "p2c_id": "IYCWDDwF1GrE1Dixjwir",
+    "score": "",
+    "p2d_id": "ar2PUDCMEE0HPn4eXwVS",
+    "pareja1_nombre": "Luis Romero (6ta) / Javi Gonzalez (6ta)"
+  },
+  {
+    "id": "vN0Rb9pfNjmfdYcFQwvc",
+    "p2c_id": "LMY3MZmGupJgt6JUFGft",
+    "pareja2_nombre": "Nuno Da (4ta) / Rudi Cressa (5ta)",
+    "score": "",
+    "p2d_id": "bfWFCPHfCAS50gFXFpHZ",
+    "pareja1_nombre": "Maikel Villasmil (4ta) / Ricardo Ramirez (5ta)",
+    "games1": null,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784328781,
+      "nanoseconds": 417000000
+    },
+    "games2": null,
+    "p1b_id": "sT6dUp8ITahc69NUqFCo",
+    "p1a_id": "DPMe68djR9d5AY5m8PYF"
+  },
+  {
+    "id": "vyheRsrr34ANO77kdlhO",
+    "score": "2-2",
+    "p2c_id": "St8IQfuepxJ5kOeV3d88",
+    "pareja2_nombre": "Camila De (4ta) / Gustavo Segovia (6ta)",
+    "pareja1_nombre": "Maikel Villasmil (4ta) / Otto Sarduy (7ma)",
+    "p2d_id": "scMpPJcl8urSCWnkU66c",
+    "games1": 2,
+    "p1a_id": "DPMe68djR9d5AY5m8PYF",
+    "p1b_id": "pIUrvc6sIexUp7A1Cvos",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784386808,
+      "nanoseconds": 563000000
+    },
+    "games2": 2
+  },
+  {
+    "id": "ySaZa2xHunq7JTlievWW",
+    "p1a_id": "ar2PUDCMEE0HPn4eXwVS",
+    "p1b_id": "mARF5P0UJopNE0jiW5V4",
+    "games2": 2,
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784388270,
+      "nanoseconds": 966000000
+    },
+    "games1": 2,
+    "pareja1_nombre": "Rossana Garcia (4ta) / Paulo Torres (6ta)",
+    "p2d_id": "U6nYxUphU7XIi9729MyC",
+    "score": "2-2",
+    "p2c_id": "afuv098vXGoVhW8X70Zv",
+    "pareja2_nombre": "Ramiro Almeida (6ta) / Luis Uramiare (6ta)"
+  },
+  {
+    "id": "zszBtol3wJUpWQea8F6w",
+    "pareja2_nombre": "Jose Chacon (6ta) / Alberto Perozo (5ta)",
+    "p2c_id": "aaj8Ncfsehsusrq5myvC",
+    "score": "",
+    "p2d_id": "YpmMBWx9BidhpiKdStsR",
+    "pareja1_nombre": "William Reyes (5ta) / Warrin Vargas (5ta)",
+    "games1": null,
+    "p1b_id": "yqKsZFZTnrluYNDItjQY",
+    "fecha": {
+      "type": "firestore/timestamp/1.0",
+      "seconds": 1784381971,
+      "nanoseconds": 308000000
+    },
+    "games2": null,
+    "p1a_id": "LhG9a7W61C7d7j6L8l2b"
+  }
+]

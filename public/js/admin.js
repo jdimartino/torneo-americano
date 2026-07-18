@@ -267,6 +267,14 @@ function renderJugadores() {
         '</div>' +
         '<div class="form-group"><label>N° Acción Club</label><input type="text" id="j-accion" placeholder="Número de acción del club"></div>' +
         '<div class="checkbox-group"><input type="checkbox" id="j-pago"><label for="j-pago"><span class="material-symbols-outlined" style="font-size:1rem;color:var(--primary);">payments</span> Pago Recibido</label></div>' +
+        '<div id="j-puntos-section" style="display:none;border-top:1px solid var(--white-5);padding-top:0.75rem;margin-top:0.5rem;">' +
+        '<div style="font-size:0.75rem;color:var(--on-surface-variant-30);margin-bottom:0.5rem;"><span class="material-symbols-outlined" style="font-size:0.8rem;">edit_note</span> Modificar Puntos</div>' +
+        '<div class="form-row">' +
+        '<div class="form-group"><label>JJ</label><input type="number" id="j-jj-delta" placeholder="0"></div>' +
+        '<div class="form-group"><label>GG</label><input type="number" id="j-gg-delta" placeholder="0"></div>' +
+        '</div>' +
+        '<div style="font-size:0.65rem;color:var(--on-surface-variant-40);margin-bottom:0.5rem;">Escribí el valor final de JJ y GG</div>' +
+        '</div>' +
         '<button class="btn btn-primary btn-block" id="btn-add-jugador"><span class="material-symbols-outlined" style="font-size:1rem;">person_add</span> Agregar Jugador</button>' +
         '</div>' +
         '</div>' +
@@ -388,6 +396,10 @@ function editJugador(id) {
     document.getElementById('j-email').value = j.email || '';
     document.getElementById('j-accion').value = j.numero_accion || '';
     document.getElementById('j-pago').checked = j.pago_recibido || false;
+    const puntosSection = document.getElementById('j-puntos-section');
+    puntosSection.style.display = 'block';
+    document.getElementById('j-jj-delta').value = j.JJ || 0;
+    document.getElementById('j-gg-delta').value = j.GG || 0;
     const btn = document.getElementById('btn-add-jugador');
     btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem;">save</span> Guardar Cambios';
     btn.classList.remove('btn-primary');
@@ -395,7 +407,7 @@ function editJugador(id) {
     btn.onclick = async () => {
         showLoading('Guardando cambios...');
         try {
-            await updateDoc(doc(db, 'jugadores', id), {
+            const update = {
                 nombre: document.getElementById('j-nombre').value.trim(),
                 apellidos: document.getElementById('j-apellidos').value.trim(),
                 categoria: document.getElementById('j-categoria').value.trim(),
@@ -403,7 +415,18 @@ function editJugador(id) {
                 email: document.getElementById('j-email').value.trim(),
                 numero_accion: document.getElementById('j-accion').value.trim(),
                 pago_recibido: document.getElementById('j-pago').checked
-            });
+            };
+            await updateDoc(doc(db, 'jugadores', id), update);
+            const newJJ = parseInt(document.getElementById('j-jj-delta').value) || 0;
+            const newGG = parseInt(document.getElementById('j-gg-delta').value) || 0;
+            const jjDelta = newJJ - (j.JJ || 0);
+            const ggDelta = newGG - (j.GG || 0);
+            if (jjDelta !== 0 || ggDelta !== 0) {
+                const puntosUpdate = {};
+                if (jjDelta !== 0) puntosUpdate.JJ = increment(jjDelta);
+                if (ggDelta !== 0) puntosUpdate.GG = increment(ggDelta);
+                await updateDoc(doc(db, 'jugadores', id), puntosUpdate);
+            }
             toast('Jugador actualizado', 'success');
             await refreshData();
         } catch (e) {
@@ -1249,11 +1272,55 @@ function renderCuartosAdmin() {
     panel.querySelectorAll('[data-del-cuarto]').forEach(b => b.addEventListener('click', () => deleteCuarto(b.dataset.delCuarto)));
 }
 
+function elegirEmpatado(candidatos) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.innerHTML =
+            '<div class="modal modal-wide">' +
+            '<div class="player-match-header">' +
+            '<span class="modal-title">Desempate - Puesto 16</span>' +
+            '<button class="modal-close-btn" id="empate-close">&times;</button>' +
+            '</div>' +
+            '<p style="font-size:0.82rem;color:var(--on-surface-variant-60);margin-bottom:0.75rem;">Hay ' + candidatos.length + ' jugadores empatados en el puesto 16. Elegí cuál clasifica:</p>' +
+            candidatos.map(j =>
+                '<div class="player-card" style="cursor:pointer;margin-bottom:0.5rem;" data-empate-id="' + j.id + '">' +
+                '<div class="player-main">' +
+                '<div class="player-name">' + esc(shortName(j)) + '</div>' +
+                '<div class="player-stats">JJ: ' + (j.JJ || 0) + ' · GG: ' + (j.GG || 0) + '</div>' +
+                '</div>' +
+                '</div>'
+            ).join('') +
+            '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelectorAll('[data-empate-id]').forEach(el => {
+            el.addEventListener('click', () => {
+                const id = el.dataset.empateId;
+                overlay.remove();
+                resolve(candidatos.find(j => j.id === id));
+            });
+        });
+        overlay.querySelector('#empate-close').addEventListener('click', () => { overlay.remove(); resolve(null); });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
+    });
+}
+
 async function generarCuartos() {
     showLoading('Generando cuartos...');
     try {
         const sorted = [...allJugadores].sort(compareRanking);
         if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); hideLoading(); return; }
+        const ref16 = sorted[15];
+        const empatados = sorted.slice(15).filter(j =>
+            (j.GG || 0) === (ref16.GG || 0) && (j.JJ || 0) === (ref16.JJ || 0)
+        );
+        if (empatados.length > 1) {
+            hideLoading();
+            const elegido = await elegirEmpatado(empatados);
+            if (!elegido) { toast('Generación cancelada', 'info'); return; }
+            showLoading('Generando cuartos...');
+            sorted[15] = elegido;
+        }
         const top16 = sorted.slice(0, 16);
         const grupos = [
             { grupo: 1, p1a: top16[0], p1b: top16[15], p2a: top16[7], p2b: top16[8] },
