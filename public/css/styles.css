@@ -168,6 +168,67 @@ body.admin-body { max-width: 600px; }
   font-size: 1.15rem;
 }
 
+.tournament-select {
+  background: var(--surface);
+  border: 1px solid var(--white-10);
+  color: var(--on-surface);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  max-width: 220px;
+}
+
+.tournament-select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.tournament-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(63, 255, 139, 0.08);
+  border: 1px solid rgba(63, 255, 139, 0.15);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.tournament-bar-icon {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.tournament-bar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.tournament-select-bar {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--white-10);
+  color: var(--on-surface);
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'Lexend', sans-serif;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.tournament-select-bar:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
 .logout-btn {
   background: var(--white-8);
   border: 1px solid var(--white-10);

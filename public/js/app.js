@@ -1,5 +1,6 @@
 import { getDocs, collection } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { db } from './firebase.js';
+import { loadTournamentConfig, col, getActiveTournamentId, getActiveTournament, getActiveTournamentIds, setSelectedTournament, setActiveTournament, getBracketConfig } from './tournamentRefs.js';
 
 let allJugadores = [];
 let allPartidos = [];
@@ -43,7 +44,8 @@ function formatDate(ts) {
 }
 
 function rankBadge(pos) {
-    if (pos <= 16) return '<span class="rank-badge qualify">' + pos + '</span>';
+    const clasificados = getBracketConfig().clasificados;
+    if (pos <= clasificados) return '<span class="rank-badge qualify">' + pos + '</span>';
     return '<span class="rank-badge">' + pos + '</span>';
 }
 
@@ -54,16 +56,17 @@ function parseScore(scoreStr) {
 }
 
 // ── Load All Data ──
-// Carga en paralelo (Promise.all) y una sola vez por sesión.
 let _dataLoaded = false;
 async function loadAllData() {
     if (_dataLoaded) return;
+    await loadTournamentConfig();
+    if (!getActiveTournamentId()) return;
     const [jugSnap, partSnap, cuartosSnap, semisSnap, finalesSnap] = await Promise.all([
-        getDocs(collection(db, 'jugadores')),
-        getDocs(collection(db, 'partidos_eliminatoria')),
-        getDocs(collection(db, 'cuartos')),
-        getDocs(collection(db, 'semifinales')),
-        getDocs(collection(db, 'final'))
+        getDocs(col('jugadores')),
+        getDocs(col('partidos_eliminatoria')),
+        getDocs(col('cuartos')),
+        getDocs(col('semifinales')),
+        getDocs(col('final'))
     ]);
     allJugadores = jugSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     allPartidos  = partSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -288,65 +291,59 @@ function renderCuartos() {
 // ── Semifinales ──
 function renderSemifinales() {
     const el = document.getElementById('semifinales');
+    const bc = getBracketConfig();
+    const numGrupos = bc.grupos;
+    const numSemis = Math.floor(numGrupos / 2);
     const completed = allCuartos.filter(c => c.ganador);
-    if (completed.length < 4) {
+    if (completed.length < numGrupos) {
         el.innerHTML =
             '<div class="bracket-round">' +
             '<div class="bracket-round-header"><span class="material-symbols-outlined" style="font-size:0.9rem;">military_tech</span> Semifinales</div>' +
-            '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de resultados de cuartos</p></div>' +
+            '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de resultados de cuartos (' + completed.length + '/' + numGrupos + ')</p></div>' +
             '</div>';
         return;
     }
-    const g1 = allCuartos.find(c => c.grupo === 1);
-    const g2 = allCuartos.find(c => c.grupo === 2);
-    const g3 = allCuartos.find(c => c.grupo === 3);
-    const g4 = allCuartos.find(c => c.grupo === 4);
-    const sf1_p1 = fixNames(g1?.ganador === 'pareja1' ? g1.pareja1_nombre : g1?.pareja2_nombre || '—');
-    const sf1_p2 = fixNames(g2?.ganador === 'pareja1' ? g2.pareja1_nombre : g2?.pareja2_nombre || '—');
-    const sf2_p1 = fixNames(g3?.ganador === 'pareja1' ? g3.pareja1_nombre : g3?.pareja2_nombre || '—');
-    const sf2_p2 = fixNames(g4?.ganador === 'pareja1' ? g4.pareja1_nombre : g4?.pareja2_nombre || '—');
-    const sf1 = allSemis.find(s => s.cruce === 1);
-    const sf2 = allSemis.find(s => s.cruce === 2);
+    let matchesHtml = '';
+    for (let i = 0; i < numSemis; i++) {
+        const gA = allCuartos.find(c => c.grupo === (i * 2 + 1));
+        const gB = allCuartos.find(c => c.grupo === (i * 2 + 2));
+        const pA = fixNames(gA?.ganador === 'pareja1' ? gA.pareja1_nombre : gA?.pareja2_nombre || '—');
+        const pB = fixNames(gB?.ganador === 'pareja1' ? gB.pareja1_nombre : gB?.pareja2_nombre || '—');
+        const sf = allSemis.find(s => s.cruce === (i + 1));
+        matchesHtml +=
+            '<div class="bracket-match">' +
+            '<div class="bracket-match-body">' +
+            '<div class="bracket-team' + (sf?.ganador === 'pareja1' ? ' winner' : '') + '">' +
+            (sf?.ganador === 'pareja1' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
+            esc(pA) + '</div>' +
+            '<div class="bracket-vs">vs</div>' +
+            '<div class="bracket-team' + (sf?.ganador === 'pareja2' ? ' winner' : '') + '">' +
+            (sf?.ganador === 'pareja2' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
+            esc(pB) + '</div>' +
+            '</div>' +
+            '<div class="bracket-score' + (!sf?.score ? ' tbd' : '') + '">' + esc(sf?.score || '—') + '</div>' +
+            '</div>';
+    }
     el.innerHTML =
         '<div class="bracket-round">' +
         '<div class="bracket-round-header"><span class="material-symbols-outlined" style="font-size:0.9rem;">military_tech</span> Semifinales</div>' +
-        '<div class="bracket-match">' +
-        '<div class="bracket-match-body">' +
-        '<div class="bracket-team' + (sf1?.ganador === 'pareja1' ? ' winner' : '') + '">' +
-        (sf1?.ganador === 'pareja1' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
-        esc(sf1_p1) + '</div>' +
-        '<div class="bracket-vs">vs</div>' +
-        '<div class="bracket-team' + (sf1?.ganador === 'pareja2' ? ' winner' : '') + '">' +
-        (sf1?.ganador === 'pareja2' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
-        esc(sf1_p2) + '</div>' +
-        '</div>' +
-        '<div class="bracket-score' + (!sf1?.score ? ' tbd' : '') + '">' + esc(sf1?.score || '—') + '</div>' +
-        '</div>' +
-        '<div class="bracket-match">' +
-        '<div class="bracket-match-body">' +
-        '<div class="bracket-team' + (sf2?.ganador === 'pareja1' ? ' winner' : '') + '">' +
-        (sf2?.ganador === 'pareja1' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
-        esc(sf2_p1) + '</div>' +
-        '<div class="bracket-vs">vs</div>' +
-        '<div class="bracket-team' + (sf2?.ganador === 'pareja2' ? ' winner' : '') + '">' +
-        (sf2?.ganador === 'pareja2' ? '<span class="material-symbols-outlined" style="font-size:0.8rem;">check_circle</span> ' : '') +
-        esc(sf2_p2) + '</div>' +
-        '</div>' +
-        '<div class="bracket-score' + (!sf2?.score ? ' tbd' : '') + '">' + esc(sf2?.score || '—') + '</div>' +
-        '</div>' +
+        matchesHtml +
         '</div>';
 }
 
 // ── Final ──
 function renderFinales() {
     const el = document.getElementById('finales');
-    if (allCuartos.filter(c => c.ganador).length < 4 || allSemis.length < 2) {
+    const numGrupos = getBracketConfig().grupos;
+    const numSemis = Math.floor(numGrupos / 2);
+    if (allCuartos.filter(c => c.ganador).length < numGrupos || allSemis.length < numSemis) {
         el.innerHTML =
             '<div class="bracket-round"><div class="bracket-round-header"><span class="material-symbols-outlined" style="font-size:0.9rem;">workspace_premium</span> Final</div>' +
             '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de semifinales</p></div></div>';
         return;
     }
-    if (!allSemis[0].ganador || !allSemis[1].ganador) {
+    const semisConGanador = allSemis.filter(s => s.ganador);
+    if (semisConGanador.length < numSemis) {
         el.innerHTML =
             '<div class="bracket-round"><div class="bracket-round-header"><span class="material-symbols-outlined" style="font-size:0.9rem;">workspace_premium</span> Final</div>' +
             '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de resultados de semifinales</p></div></div>';
@@ -433,11 +430,58 @@ function setupTabScroll() {
     });
 }
 
+// ── Public Tournament Selector ──
+let _tournamentList = [];
+
+async function loadTournamentList() {
+    try {
+        const snap = await getDocs(collection(db, 'torneos'));
+        _tournamentList = snap.docs.map(d => ({ id: d.id, name: d.data().name }));
+    } catch (e) {
+        _tournamentList = [];
+    }
+}
+
+function updatePublicTournamentSelector() {
+    const wrap = document.getElementById('public-tournament-selector-wrap');
+    const sel = document.getElementById('public-tournament-selector');
+    if (!wrap || !sel) return;
+    const ids = getActiveTournamentIds();
+    if (ids.length <= 1) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    const currentId = getActiveTournamentId();
+    sel.innerHTML = ids.map(id => {
+        const t = _tournamentList.find(x => x.id === id);
+        return '<option value="' + id + '"' + (id === currentId ? ' selected' : '') + '>' + (t ? t.name : id) + '</option>';
+    }).join('');
+}
+
+function initPublicTournamentSelector() {
+    const sel = document.getElementById('public-tournament-selector');
+    if (!sel) return;
+    sel.addEventListener('change', async () => {
+        const newId = sel.value;
+        if (newId === getActiveTournamentId()) return;
+        try {
+            await setSelectedTournament(newId);
+            _dataLoaded = false;
+            await loadAllData();
+            _renderTab(document.querySelector('.tab-nav button.active')?.dataset.tab || 'posiciones');
+            updatePublicTournamentSelector();
+        } catch (e) {
+            console.error('Error switching tournament:', e);
+        }
+    });
+}
+
 // ── Initial Load ──
 async function init() {
     try {
         document.getElementById('posiciones').innerHTML = loadingHTML;
         await loadAllData();
+        await loadTournamentList();
+        initPublicTournamentSelector();
+        updatePublicTournamentSelector();
         const initialTab = location.hash.replace('#', '') || 'posiciones';
         history.replaceState({ tab: initialTab }, '', '#' + initialTab);
         _renderTab(initialTab);

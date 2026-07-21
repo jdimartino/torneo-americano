@@ -1,6 +1,8 @@
 import { auth, db } from './firebase.js';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, writeBatch, increment } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, query, orderBy, writeBatch, increment, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { loadTournamentConfig, col, docRef, docRefAuto, getActiveTournamentId, getActiveTournament, getActiveTournamentIds, setSelectedTournament, getBracketConfig } from './tournamentRefs.js';
+import { renderTournamentPanel, loadTournaments, getTournaments } from './tournament.js';
 
 let allJugadores = [];
 let jugadorSearchTerm = '';
@@ -112,7 +114,8 @@ function compareRanking(a, b) {
 }
 
 function rankBadge(pos) {
-    if (pos <= 16) return '<span class="rank-badge qualify">' + pos + '</span>';
+    const clasificados = getBracketConfig().clasificados;
+    if (pos <= clasificados) return '<span class="rank-badge qualify">' + pos + '</span>';
     return '<span class="rank-badge">' + pos + '</span>';
 }
 
@@ -140,6 +143,15 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('login-container-wrapper').style.display = 'none';
         document.getElementById('admin-panel').style.display = 'block';
         setupTabScroll();
+        initTournamentSelector();
+        await loadTournamentConfig();
+        await migrateIfRootExists();
+        if (!getActiveTournamentId()) {
+            _switchPanel('torneos');
+            return;
+        }
+        await loadTournaments();
+        updateTournamentSelector();
         const initialPanel = location.hash.replace('#', '') || 'jugadores';
         _switchPanel(initialPanel);
         panelLoading(document.getElementById('panel-' + initialPanel), 'Cargando...');
@@ -203,20 +215,82 @@ window.showPanel = function(panelId) {
     _switchPanel(panelId);
 };
 
+window.toast = toast;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.refreshData = refreshData;
+
 window.addEventListener('popstate', () => {
     const panel = (history.state && history.state.panel) || location.hash.replace('#', '') || 'jugadores';
     _switchPanel(panel);
 });
 
+// ── Migration: detect root-level collections and move into torneos/ ──
+async function migrateIfRootExists() {
+    try {
+        const rootSnap = await getDocs(collection(db, 'jugadores'));
+        if (rootSnap.empty) return false;
+        const configSnap = await getDoc(doc(db, 'config', 'activeTournament'));
+        if (configSnap.exists()) {
+            const cfg = configSnap.data();
+            if ((cfg.activeTournamentIds && cfg.activeTournamentIds.length > 0) || cfg.tournamentId) return false;
+        }
+        if (!confirm('Se detectaron datos en la raíz. ¿Migrarlos al sistema de torneos?\nEsto creará el torneo "Torneo Masculino Americano Julio 2026" y moverá todos los datos.')) return false;
+        showLoading('Migrando datos al sistema de torneos...');
+        const torneoRef = await addDoc(collection(db, 'torneos'), {
+            name: 'Torneo Masculino Americano Julio 2026',
+            status: 'active',
+            fechaCreacion: new Date(),
+            bracketConfig: { clasificados: 16, grupos: 4, rondas: [
+                { nombre: 'Cuartos', cantidad: 4, jugadoresPorPartido: 4 },
+                { nombre: 'Semifinales', cantidad: 2, jugadoresPorPartido: 2 },
+                { nombre: 'Final', cantidad: 1, jugadoresPorPartido: 2 }
+            ]}
+        });
+        const tid = torneoRef.id;
+        const subcols = [
+            { root: 'jugadores', sub: 'jugadores' },
+            { root: 'partidos_eliminatoria', sub: 'partidos_eliminatoria' },
+            { root: 'cuartos', sub: 'cuartos' },
+            { root: 'semifinales', sub: 'semifinales' },
+            { root: 'final', sub: 'final' }
+        ];
+        for (const { root, sub } of subcols) {
+            const snap = await getDocs(collection(db, root));
+            if (snap.empty) continue;
+            let batch = writeBatch(db);
+            let cnt = 0;
+            for (const d of snap.docs) {
+                batch.set(doc(db, 'torneos', tid, sub, d.id), d.data());
+                batch.delete(d.ref);
+                cnt++;
+                if (cnt % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+            }
+            if (cnt % 450 !== 0) await batch.commit();
+        }
+        await setDoc(doc(db, 'config', 'activeTournament'), { activeTournamentIds: [tid], selectedTournamentId: tid });
+        await loadTournamentConfig();
+        hideLoading();
+        toast('Migración completada', 'success');
+        return true;
+    } catch (e) {
+        hideLoading();
+        console.error('Migration error:', e);
+        toast('Error en migración: ' + e.message, 'error');
+        return false;
+    }
+}
+
 // ── Data ──
 async function loadData() {
+    if (!getActiveTournamentId()) return;
     try {
         const [j, p, c, s, f] = await Promise.all([
-            getDocs(query(collection(db, 'jugadores'), orderBy('nombre'))),
-            getDocs(query(collection(db, 'partidos_eliminatoria'), orderBy('fecha', 'desc'))),
-            getDocs(query(collection(db, 'cuartos'), orderBy('grupo'))),
-            getDocs(query(collection(db, 'semifinales'), orderBy('cruce'))),
-            getDocs(collection(db, 'final'))
+            getDocs(query(col('jugadores'), orderBy('nombre'))),
+            getDocs(query(col('partidos_eliminatoria'), orderBy('fecha', 'desc'))),
+            getDocs(query(col('cuartos'), orderBy('grupo'))),
+            getDocs(query(col('semifinales'), orderBy('cruce'))),
+            getDocs(col('final'))
         ]);
         allJugadores = j.docs.map(d => ({ id: d.id, ...d.data() }));
         allPartidos = p.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -228,8 +302,54 @@ async function loadData() {
 
 async function refreshData() {
     await loadData();
+    updateTournamentSelector();
     const active = document.querySelector('.admin-panel.active');
     if (active) renderPanel(active.id.replace('panel-', ''));
+}
+
+function updateTournamentSelector() {
+    const wrap = document.getElementById('tournament-selector-wrap');
+    const sel = document.getElementById('tournament-selector');
+    if (!wrap || !sel) return;
+    const ids = getActiveTournamentIds();
+    if (ids.length <= 1) { wrap.style.display = 'none'; return; }
+    wrap.style.display = '';
+    const currentId = getActiveTournamentId();
+    const tournaments = getTournaments();
+    sel.innerHTML = ids.map(id => {
+        const t = tournaments.find(x => x.id === id);
+        const name = t ? t.name : id;
+        return '<option value="' + id + '"' + (id === currentId ? ' selected' : '') + '>' + esc(name) + '</option>';
+    }).join('');
+}
+
+function initTournamentSelector() {
+    const sel = document.getElementById('tournament-selector');
+    if (!sel) return;
+    sel.addEventListener('change', async () => {
+        const newId = sel.value;
+        if (newId === getActiveTournamentId()) return;
+        showLoading('Cambiando torneo...');
+        try {
+            await setSelectedTournament(newId);
+            const tournaments = getTournaments();
+            const t = tournaments.find(x => x.id === newId);
+            if (t) {
+                const { setActiveTournament: setT } = await import('./tournamentRefs.js');
+                setT(newId, { id: newId, ...t });
+            }
+            await loadData();
+            updateTournamentSelector();
+            const active = document.querySelector('.admin-panel.active');
+            if (active) renderPanel(active.id.replace('panel-', ''));
+            toast('Torneo cambiado', 'success');
+        } catch (e) {
+            toast('Error al cambiar torneo', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
+    });
 }
 
 function renderPanel(panelId) {
@@ -241,6 +361,7 @@ function renderPanel(panelId) {
         case 'cuartos-admin': renderCuartosAdmin(); break;
         case 'semis-admin': renderSemisAdmin(); break;
         case 'final-admin': renderFinalAdmin(); break;
+        case 'torneos': renderTournamentPanel(); break;
     }
 }
 
@@ -292,7 +413,7 @@ function renderJugadores() {
         const open = document.getElementById('j-form-body').style.display !== 'none';
         toggleJugadorForm(!open);
     });
-    document.getElementById('btn-add-jugador').onclick = addJugador;
+    document.getElementById('btn-add-jugador').onclick = () => safeAction(addJugador);
     document.getElementById('jugador-search').addEventListener('input', (e) => {
         jugadorSearchTerm = e.target.value;
         renderJugadoresList();
@@ -358,7 +479,7 @@ function renderJugadoresList() {
         ).join('');
 
     listEl.querySelectorAll('[data-edit-jugador]').forEach(b => b.addEventListener('click', () => editJugador(b.dataset.editJugador)));
-    listEl.querySelectorAll('[data-del-jugador]').forEach(b => b.addEventListener('click', () => deleteJugador(b.dataset.delJugador)));
+    listEl.querySelectorAll('[data-del-jugador]').forEach(b => b.addEventListener('click', () => safeAction(() => deleteJugador(b.dataset.delJugador))));
 }
 
 async function addJugador() {
@@ -375,7 +496,7 @@ async function addJugador() {
     if (!data.nombre || !data.apellidos) { toast('Nombre y apellidos requeridos', 'error'); return; }
     showLoading('Agregando jugador...');
     try {
-        await addDoc(collection(db, 'jugadores'), data);
+        await addDoc(col('jugadores'), data);
         toast('Jugador agregado', 'success');
         await refreshData();
     } catch (e) {
@@ -416,7 +537,7 @@ function editJugador(id) {
                 numero_accion: document.getElementById('j-accion').value.trim(),
                 pago_recibido: document.getElementById('j-pago').checked
             };
-            await updateDoc(doc(db, 'jugadores', id), update);
+            await updateDoc(docRef('jugadores', id), update);
             const newJJ = parseInt(document.getElementById('j-jj-delta').value) || 0;
             const newGG = parseInt(document.getElementById('j-gg-delta').value) || 0;
             const jjDelta = newJJ - (j.JJ || 0);
@@ -425,7 +546,7 @@ function editJugador(id) {
                 const puntosUpdate = {};
                 if (jjDelta !== 0) puntosUpdate.JJ = increment(jjDelta);
                 if (ggDelta !== 0) puntosUpdate.GG = increment(ggDelta);
-                await updateDoc(doc(db, 'jugadores', id), puntosUpdate);
+                await updateDoc(docRef('jugadores', id), puntosUpdate);
             }
             toast('Jugador actualizado', 'success');
             await refreshData();
@@ -444,7 +565,7 @@ async function deleteJugador(id) {
     if (!confirm('¿Eliminar este jugador?')) return;
     showLoading('Eliminando jugador...');
     try {
-        await deleteDoc(doc(db, 'jugadores', id));
+        await deleteDoc(docRef('jugadores', id));
         toast('Jugador eliminado', 'success');
         await refreshData();
     } catch (e) {
@@ -548,7 +669,7 @@ function showCSVPreview(all, nuevos, existentes) {
         '</div>';
 
     if (nuevos.length) {
-        document.getElementById('btn-confirm-import').addEventListener('click', () => confirmCSVImport(nuevos));
+        document.getElementById('btn-confirm-import').addEventListener('click', () => safeAction(() => confirmCSVImport(nuevos)));
     }
     document.getElementById('btn-cancel-import').addEventListener('click', () => { el.style.display = 'none'; el.innerHTML = ''; });
 }
@@ -558,7 +679,7 @@ async function confirmCSVImport(nuevos) {
     try {
         const batch = writeBatch(db);
         nuevos.forEach(j => {
-            const ref = doc(collection(db, 'jugadores'));
+            const ref = docRefAuto('jugadores');
             batch.set(ref, {
                 nombre: j.nombre,
                 apellidos: j.apellidos,
@@ -590,6 +711,13 @@ async function confirmCSVImport(nuevos) {
 let editingDrawId = null;
 let drawScore1 = 0;
 let drawScore2 = 0;
+let isBusy = false;
+
+async function safeAction(fn) {
+    if (isBusy) return;
+    isBusy = true;
+    try { await fn(); } finally { isBusy = false; }
+}
 
 function formatMatchDate(fecha) {
     if (!fecha) return '';
@@ -733,12 +861,12 @@ function renderDraw() {
         const open = document.getElementById('d-form-body').style.display !== 'none';
         toggleDrawForm(!open);
     });
-    document.getElementById('btn-save-draw').addEventListener('click', saveDrawPartido);
+    document.getElementById('btn-save-draw').addEventListener('click', () => safeAction(saveDrawPartido));
     if (isEditing) {
         document.getElementById('btn-cancel-draw').addEventListener('click', () => { editingDrawId = null; renderDraw(); });
     }
     panel.querySelectorAll('[data-edit-draw]').forEach(b => b.addEventListener('click', () => { editingDrawId = b.dataset.editDraw; renderDraw(); }));
-    panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delDraw)));
+    panel.querySelectorAll('[data-del-draw]').forEach(b => b.addEventListener('click', () => safeAction(() => deleteDrawPartido(b.dataset.delDraw))));
 
     ['d-p1a', 'd-p1b', 'd-p2c', 'd-p2d'].forEach(id => {
         const el = document.getElementById(id);
@@ -841,7 +969,7 @@ async function saveDrawPartido() {
                     update.JJ = increment(actualDeltaJJ);
                 }
             }
-            if (Object.keys(update).length > 0) batch.update(doc(db, 'jugadores', playerId), update);
+            if (Object.keys(update).length > 0) batch.update(docRef('jugadores', playerId), update);
         }
 
         const matchUpdate = {
@@ -853,7 +981,7 @@ async function saveDrawPartido() {
             matchUpdate.games1 = newScoreValid ? newG1 : null;
             matchUpdate.games2 = newScoreValid ? newG2 : null;
         }
-        batch.update(doc(db, 'partidos_eliminatoria', editingDrawId), matchUpdate);
+        batch.update(docRef('partidos_eliminatoria', editingDrawId), matchUpdate);
         showLoading('Actualizando partido...');
         try {
             await batch.commit();
@@ -867,12 +995,20 @@ async function saveDrawPartido() {
             hideLoading();
         }
     } else {
-        await addDoc(collection(db, 'partidos_eliminatoria'), {
-            p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
-            pareja1_nombre, pareja2_nombre, score: '', games1: null, games2: null, fecha: new Date()
-        });
-        toast('Parejas creadas en el DRAW', 'success');
-        await refreshData();
+        showLoading('Creando parejas...');
+        try {
+            await addDoc(col('partidos_eliminatoria'), {
+                p1a_id: p1a, p1b_id: p1b, p2c_id: p2c, p2d_id: p2d,
+                pareja1_nombre, pareja2_nombre, score: '', games1: null, games2: null, fecha: new Date()
+            });
+            toast('Parejas creadas en el DRAW', 'success');
+            await refreshData();
+        } catch (e) {
+            toast('Error al crear', 'error');
+            console.error(e);
+        } finally {
+            hideLoading();
+        }
     }
 }
 
@@ -909,11 +1045,11 @@ async function deleteDrawPartido(id) {
 
             for (const playerId in updates) {
                 if (Object.keys(updates[playerId]).length > 0) {
-                    batch.update(doc(db, 'jugadores', playerId), updates[playerId]);
+                    batch.update(docRef('jugadores', playerId), updates[playerId]);
                 }
             }
         }
-        batch.delete(doc(db, 'partidos_eliminatoria', id));
+        batch.delete(docRef('partidos_eliminatoria', id));
         await batch.commit();
         if (editingDrawId === id) editingDrawId = null;
         toast('Partido eliminado', 'success');
@@ -1016,8 +1152,8 @@ function renderResultados() {
         });
     });
 
-    panel.querySelectorAll('[data-save-result]').forEach(b => b.addEventListener('click', () => saveResultado(b.dataset.saveResult)));
-    panel.querySelectorAll('[data-del-result]').forEach(b => b.addEventListener('click', () => deleteDrawPartido(b.dataset.delResult)));
+    panel.querySelectorAll('[data-save-result]').forEach(b => b.addEventListener('click', () => safeAction(() => saveResultado(b.dataset.saveResult))));
+    panel.querySelectorAll('[data-del-result]').forEach(b => b.addEventListener('click', () => safeAction(() => deleteDrawPartido(b.dataset.delResult))));
 
     const resultSearch = document.getElementById('result-search');
     if (resultSearch) {
@@ -1053,10 +1189,10 @@ async function saveResultado(id) {
         const update = {};
         if (delta !== 0) update.GG = increment(delta);
         if (isFirstResult) update.JJ = increment(1);
-        if (Object.keys(update).length > 0) batch.update(doc(db, 'jugadores', playerId), update);
+        if (Object.keys(update).length > 0) batch.update(docRef('jugadores', playerId), update);
     }
 
-    batch.update(doc(db, 'partidos_eliminatoria', id), {
+    batch.update(docRef('partidos_eliminatoria', id), {
         score: scoreStr, games1: rs.s1, games2: rs.s2, fecha: new Date()
     });
 
@@ -1225,34 +1361,56 @@ window.showPlayerMatches = function(playerId) {
 // ═══════════════════════════════════════════
 function renderCuartosAdmin() {
     const panel = document.getElementById('panel-cuartos-admin');
-    if (!allCuartos.length) {
-        panel.innerHTML =
-            '<div class="card">' +
-            '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">emoji_events</span> Generar Cuartos de Final</h3>' +
-            '<p style="font-size:0.82rem;color:var(--on-surface-variant-60);margin-bottom:0.75rem;">Empareja a los 16 mejores jugadores según GG.</p>' +
-            '<button class="btn btn-primary btn-block" id="btn-generar-cuartos"><span class="material-symbols-outlined" style="font-size:1rem;">auto_awesome</span> Generar Cuartos</button>' +
-            '</div>';
-        document.getElementById('btn-generar-cuartos').addEventListener('click', generarCuartos);
-        return;
-    }
-    panel.innerHTML =
-        '<div class="card">' +
-        '<h3><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">emoji_events</span> Cuartos de Final</h3>' +
-        '<button class="btn btn-outline btn-block" id="btn-regenerar-cuartos"><span class="material-symbols-outlined" style="font-size:0.9rem;">refresh</span> Regenerar Cuartos</button>' +
+    const opts = allJugadores.map(j =>
+        '<option value="' + j.id + '">' + esc(shortName(j)) + '</option>'
+    ).join('');
+    const bc = getBracketConfig();
+
+    let html =
+        '<div style="font-size:0.75rem;color:var(--on-surface-variant-40);margin-bottom:0.75rem;">' +
+        '<span class="material-symbols-outlined" style="font-size:0.8rem;">info</span> ' +
+        'Grupos configurados: <strong>' + bc.grupos + '</strong> · Clasificados: <strong>' + bc.clasificados + '</strong>' +
         '</div>' +
-        allCuartos.map(c =>
+        '<div class="card">' +
+        '<button class="collapse-toggle" id="c-toggle-form" type="button" aria-expanded="false">' +
+        '<span class="collapse-toggle-left"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">emoji_events</span> Agregar Cuarto</span>' +
+        '<span class="material-symbols-outlined chevron">expand_more</span>' +
+        '</button>' +
+        '<div id="c-form-body" style="display:none;">' +
+        '<div class="match-form">' +
+        '<div class="pair-label team-a"><span class="material-symbols-outlined" style="font-size:0.8rem;">circle</span> Pareja 1</div>' +
+        '<div class="pair-row">' +
+        '<select id="c-p1a"><option value="">\u2014 Jugador A \u2014</option>' + opts + '</select>' +
+        '<select id="c-p1b"><option value="">\u2014 Jugador B \u2014</option>' + opts + '</select>' +
+        '</div>' +
+        '<div class="pair-label team-b"><span class="material-symbols-outlined" style="font-size:0.8rem;">circle</span> Pareja 2</div>' +
+        '<div class="pair-row">' +
+        '<select id="c-p2c"><option value="">\u2014 Jugador C \u2014</option>' + opts + '</select>' +
+        '<select id="c-p2d"><option value="">\u2014 Jugador D \u2014</option>' + opts + '</select>' +
+        '</div>' +
+        '<div class="form-group"><label>Grupo</label><input type="number" id="c-grupo" placeholder="1" min="1" style="max-width:80px;"></div>' +
+        '<div class="btn-group-spaced" style="margin-top:0.75rem;">' +
+        '<button class="btn btn-primary" id="btn-add-cuarto"><span class="material-symbols-outlined" style="font-size:1rem;">add</span> Agregar Cuarto</button>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
+
+    if (allCuartos.length) {
+        html += '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">emoji_events</span> Cuartos de Final (' + allCuartos.length + ')</div>';
+        html += allCuartos.map(c =>
             '<div class="card">' +
             '<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">' +
             '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--secondary);">emoji_events</span>' +
             '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Grupo ' + c.grupo + '</span>' +
             '</div>' +
-            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(c.pareja1_nombre || '—')) + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(c.pareja1_nombre || '\u2014')) + '</div>' +
             '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(c.pareja2_nombre || '—')) + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(c.pareja2_nombre || '\u2014')) + '</div>' +
             '<div class="form-row" style="align-items:center;">' +
             '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="c-score-' + c.id + '" placeholder="4-2" value="' + esc(c.score || '') + '" style="max-width:80px;"></div>' +
             '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="c-ganador-' + c.id + '">' +
-            '<option value="">— Seleccionar —</option>' +
+            '<option value="">\u2014 Seleccionar \u2014</option>' +
             '<option value="pareja1"' + (c.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(c.pareja1_nombre || 'Pareja 1')) + '</option>' +
             '<option value="pareja2"' + (c.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(c.pareja2_nombre || 'Pareja 2')) + '</option>' +
             '</select></div>' +
@@ -1263,107 +1421,54 @@ function renderCuartosAdmin() {
             '</div>' +
             '</div>'
         ).join('');
+    } else {
+        html += '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">emoji_events</span><p>No hay cuartos creados. Agregá el primer cuarto arriba.</p></div>';
+    }
 
-    document.getElementById('btn-regenerar-cuartos')?.addEventListener('click', async () => {
-        if (!confirm('¿Regenerar cuartos? Se eliminarán los actuales.')) return;
-        await regenerarCuartos();
+    panel.innerHTML = html;
+
+    document.getElementById('c-toggle-form')?.addEventListener('click', () => {
+        const body = document.getElementById('c-form-body');
+        const btn = document.getElementById('c-toggle-form');
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        btn.classList.toggle('open', !open);
+        btn.querySelector('.chevron').textContent = open ? 'expand_more' : 'expand_less';
+        btn.setAttribute('aria-expanded', !open ? 'true' : 'false');
     });
-    panel.querySelectorAll('[data-save-cuarto]').forEach(b => b.addEventListener('click', () => saveCuarto(b.dataset.saveCuarto)));
-    panel.querySelectorAll('[data-del-cuarto]').forEach(b => b.addEventListener('click', () => deleteCuarto(b.dataset.delCuarto)));
+    document.getElementById('btn-add-cuarto')?.addEventListener('click', () => safeAction(addCuarto));
+    panel.querySelectorAll('[data-save-cuarto]').forEach(b => b.addEventListener('click', () => safeAction(() => saveCuarto(b.dataset.saveCuarto))));
+    panel.querySelectorAll('[data-del-cuarto]').forEach(b => b.addEventListener('click', () => safeAction(() => deleteCuarto(b.dataset.delCuarto))));
 }
 
-function elegirEmpatado(candidatos) {
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-        overlay.innerHTML =
-            '<div class="modal modal-wide">' +
-            '<div class="player-match-header">' +
-            '<span class="modal-title">Desempate - Puesto 16</span>' +
-            '<button class="modal-close-btn" id="empate-close">&times;</button>' +
-            '</div>' +
-            '<p style="font-size:0.82rem;color:var(--on-surface-variant-60);margin-bottom:0.75rem;">Hay ' + candidatos.length + ' jugadores empatados en el puesto 16. Elegí cuál clasifica:</p>' +
-            candidatos.map(j =>
-                '<div class="player-card" style="cursor:pointer;margin-bottom:0.5rem;" data-empate-id="' + j.id + '">' +
-                '<div class="player-main">' +
-                '<div class="player-name">' + esc(shortName(j)) + '</div>' +
-                '<div class="player-stats">JJ: ' + (j.JJ || 0) + ' · GG: ' + (j.GG || 0) + '</div>' +
-                '</div>' +
-                '</div>'
-            ).join('') +
-            '</div>';
-        document.body.appendChild(overlay);
-        overlay.querySelectorAll('[data-empate-id]').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = el.dataset.empateId;
-                overlay.remove();
-                resolve(candidatos.find(j => j.id === id));
-            });
-        });
-        overlay.querySelector('#empate-close').addEventListener('click', () => { overlay.remove(); resolve(null); });
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(null); } });
-    });
-}
-
-async function generarCuartos() {
-    showLoading('Generando cuartos...');
+async function addCuarto() {
+    const p1a = document.getElementById('c-p1a').value;
+    const p1b = document.getElementById('c-p1b').value;
+    const p2c = document.getElementById('c-p2c').value;
+    const p2d = document.getElementById('c-p2d').value;
+    const grupo = parseInt(document.getElementById('c-grupo').value) || 0;
+    const maxGrupos = getBracketConfig().grupos;
+    if (!p1a || !p1b || !p2c || !p2d) { toast('Seleccioná los 4 jugadores', 'error'); return; }
+    if (!grupo) { toast('Ingresá un número de grupo', 'error'); return; }
+    if (grupo < 1 || grupo > maxGrupos) { toast('El grupo debe ser entre 1 y ' + maxGrupos, 'error'); return; }
+    const duplicados = allCuartos.filter(c => c.grupo === grupo);
+    if (duplicados.length >= 2) { toast('El grupo ' + grupo + ' ya tiene 2 cuartos', 'error'); return; }
+    showLoading('Agregando cuarto...');
     try {
-        const sorted = [...allJugadores].sort(compareRanking);
-        if (sorted.length < 16) { toast('Se necesitan al menos 16 jugadores', 'error'); hideLoading(); return; }
-        const ref16 = sorted[15];
-        const empatados = sorted.slice(15).filter(j =>
-            (j.GG || 0) === (ref16.GG || 0) && (j.JJ || 0) === (ref16.JJ || 0)
-        );
-        if (empatados.length > 1) {
-            hideLoading();
-            const elegido = await elegirEmpatado(empatados);
-            if (!elegido) { toast('Generación cancelada', 'info'); return; }
-            showLoading('Generando cuartos...');
-            sorted[15] = elegido;
-        }
-        const top16 = sorted.slice(0, 16);
-        const grupos = [
-            { grupo: 1, p1a: top16[0], p1b: top16[15], p2a: top16[7], p2b: top16[8] },
-            { grupo: 2, p1a: top16[4], p1b: top16[11], p2a: top16[3], p2b: top16[12] },
-            { grupo: 3, p1a: top16[1], p1b: top16[14], p2a: top16[6], p2b: top16[9] },
-            { grupo: 4, p1a: top16[5], p1b: top16[10], p2a: top16[2], p2b: top16[13] }
-        ];
-        const batch = writeBatch(db);
-        for (const g of grupos) {
-            const ref = doc(collection(db, 'cuartos'));
-            batch.set(ref, {
-                grupo: g.grupo,
-                pareja1_id_a: g.p1a.id, pareja1_id_b: g.p1b.id,
-                pareja1_nombre: shortName(g.p1a) + ' / ' + shortName(g.p1b),
-                pareja2_id_a: g.p2a.id, pareja2_id_b: g.p2b.id,
-                pareja2_nombre: shortName(g.p2a) + ' / ' + shortName(g.p2b),
-                score: '', ganador: ''
-            });
-        }
-        await batch.commit();
-        toast('Cuartos generados', 'success');
+        await addDoc(col('cuartos'), {
+            grupo,
+            pareja1_id_a: p1a, pareja1_id_b: p1b,
+            pareja1_nombre: getPlayerName(p1a) + ' / ' + getPlayerName(p1b),
+            pareja2_id_a: p2c, pareja2_id_b: p2d,
+            pareja2_nombre: getPlayerName(p2c) + ' / ' + getPlayerName(p2d),
+            score: '', ganador: ''
+        });
+        toast('Cuarto agregado', 'success');
         await refreshData();
     } catch (e) {
-        toast('Error al generar cuartos', 'error');
+        toast('Error al agregar cuarto', 'error');
         console.error(e);
     } finally {
-        hideLoading();
-    }
-}
-
-async function regenerarCuartos() {
-    showLoading('Regenerando cuartos...');
-    try {
-        const batch = writeBatch(db);
-        allCuartos.forEach(c => batch.delete(doc(db, 'cuartos', c.id)));
-        allSemis.forEach(s => batch.delete(doc(db, 'semifinales', s.id)));
-        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
-        await batch.commit();
-        await refreshData();
-        await generarCuartos();
-    } catch (e) {
-        toast('Error al regenerar', 'error');
-        console.error(e);
         hideLoading();
     }
 }
@@ -1373,16 +1478,9 @@ async function saveCuarto(id) {
     const ganador = document.getElementById('c-ganador-' + id).value;
     showLoading('Guardando cuarto...');
     try {
-        await updateDoc(doc(db, 'cuartos', id), { score, ganador });
+        await updateDoc(docRef('cuartos', id), { score, ganador });
         toast('Cuarto guardado', 'success');
         await refreshData();
-        const completos = allCuartos.filter(c => c.ganador);
-        if (completos.length === 4) {
-            showLoading('Generando semifinales...');
-            await generarSemis();
-            await refreshData();
-            toast('Semifinales generadas automáticamente', 'success');
-        }
     } catch (e) {
         toast('Error al guardar', 'error');
         console.error(e);
@@ -1392,14 +1490,10 @@ async function saveCuarto(id) {
 }
 
 async function deleteCuarto(id) {
-    if (!confirm('¿Eliminar este cuarto? Se eliminarán también semifinales y final asociadas.')) return;
+    if (!confirm('\u00bfEliminar este cuarto?')) return;
     showLoading('Eliminando cuarto...');
     try {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'cuartos', id));
-        allSemis.forEach(s => batch.delete(doc(db, 'semifinales', s.id)));
-        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
-        await batch.commit();
+        await deleteDoc(docRef('cuartos', id));
         toast('Cuarto eliminado', 'success');
         await refreshData();
     } catch (e) {
@@ -1410,51 +1504,45 @@ async function deleteCuarto(id) {
     }
 }
 
-// ═══════════════════════════════════════════
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 // SEMIFINALES
-// ═══════════════════════════════════════════
-async function generarSemis() {
-    const cuartosCompletos = allCuartos.filter(c => c.ganador);
-    if (cuartosCompletos.length < 4) return;
-    const g1 = allCuartos.find(c => c.grupo === 1);
-    const g2 = allCuartos.find(c => c.grupo === 2);
-    const g3 = allCuartos.find(c => c.grupo === 3);
-    const g4 = allCuartos.find(c => c.grupo === 4);
-    if (!g1 || !g2 || !g3 || !g4) return;
-    const sf1_p1 = g1.ganador === 'pareja1' ? g1.pareja1_nombre : g1.pareja2_nombre;
-    const sf1_p2 = g2.ganador === 'pareja1' ? g2.pareja1_nombre : g2.pareja2_nombre;
-    const sf2_p1 = g3.ganador === 'pareja1' ? g3.pareja1_nombre : g3.pareja2_nombre;
-    const sf2_p2 = g4.ganador === 'pareja1' ? g4.pareja1_nombre : g4.pareja2_nombre;
-    const batch = writeBatch(db);
-    allSemis.forEach(s => batch.delete(doc(db, 'semifinales', s.id)));
-    const ref1 = doc(collection(db, 'semifinales'));
-    const ref2 = doc(collection(db, 'semifinales'));
-    batch.set(ref1, { cruce: 1, pareja1_nombre: sf1_p1, pareja2_nombre: sf1_p2, score: '', ganador: '' });
-    batch.set(ref2, { cruce: 2, pareja1_nombre: sf2_p1, pareja2_nombre: sf2_p2, score: '', ganador: '' });
-    await batch.commit();
-}
-
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 function renderSemisAdmin() {
     const panel = document.getElementById('panel-semis-admin');
-    if (!allSemis.length) {
-        panel.innerHTML = '<div class="empty-state" style="padding:2rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de que se completen los cuartos</p></div>';
-        return;
-    }
-    panel.innerHTML =
-        '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">military_tech</span> Semifinales</div>' +
-        allSemis.map(s =>
+
+    let html =
+        '<div class="card">' +
+        '<button class="collapse-toggle" id="s-toggle-form" type="button" aria-expanded="false">' +
+        '<span class="collapse-toggle-left"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--team);">military_tech</span> Agregar Semifinal</span>' +
+        '<span class="material-symbols-outlined chevron">expand_more</span>' +
+        '</button>' +
+        '<div id="s-form-body" style="display:none;">' +
+        '<div class="match-form">' +
+        '<div class="form-group"><label>Pareja 1</label><input type="text" id="s-pareja1" placeholder="Nombre pareja 1"></div>' +
+        '<div class="form-group"><label>Pareja 2</label><input type="text" id="s-pareja2" placeholder="Nombre pareja 2"></div>' +
+        '<div class="form-group"><label>Cruce</label><input type="number" id="s-cruce" placeholder="1" min="1" style="max-width:80px;"></div>' +
+        '<div class="btn-group-spaced" style="margin-top:0.75rem;">' +
+        '<button class="btn btn-primary" id="btn-add-semi"><span class="material-symbols-outlined" style="font-size:1rem;">add</span> Agregar Semifinal</button>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
+
+    if (allSemis.length) {
+        html += '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:0.9rem;">military_tech</span> Semifinales (' + allSemis.length + ')</div>';
+        html += allSemis.map(s =>
             '<div class="card">' +
             '<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">' +
             '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--team);">military_tech</span>' +
             '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Semifinal ' + s.cruce + '</span>' +
             '</div>' +
-            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(s.pareja1_nombre || '—')) + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(s.pareja1_nombre || '\u2014')) + '</div>' +
             '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(s.pareja2_nombre || '—')) + '</div>' +
+            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(s.pareja2_nombre || '\u2014')) + '</div>' +
             '<div class="form-row" style="align-items:center;">' +
             '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="s-score-' + s.id + '" placeholder="4-2" value="' + esc(s.score || '') + '" style="max-width:80px;"></div>' +
             '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="s-ganador-' + s.id + '">' +
-            '<option value="">— Seleccionar —</option>' +
+            '<option value="">\u2014 Seleccionar \u2014</option>' +
             '<option value="pareja1"' + (s.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(s.pareja1_nombre || 'Pareja 1')) + '</option>' +
             '<option value="pareja2"' + (s.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(s.pareja2_nombre || 'Pareja 2')) + '</option>' +
             '</select></div>' +
@@ -1465,9 +1553,45 @@ function renderSemisAdmin() {
             '</div>' +
             '</div>'
         ).join('');
+    } else {
+        html += '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">military_tech</span><p>No hay semifinales creadas. Agregá la primera arriba.</p></div>';
+    }
 
-    panel.querySelectorAll('[data-save-semi]').forEach(b => b.addEventListener('click', () => saveSemi(b.dataset.saveSemi)));
-    panel.querySelectorAll('[data-del-semi]').forEach(b => b.addEventListener('click', () => deleteSemi(b.dataset.delSemi)));
+    panel.innerHTML = html;
+
+    document.getElementById('s-toggle-form')?.addEventListener('click', () => {
+        const body = document.getElementById('s-form-body');
+        const btn = document.getElementById('s-toggle-form');
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        btn.classList.toggle('open', !open);
+        btn.querySelector('.chevron').textContent = open ? 'expand_more' : 'expand_less';
+        btn.setAttribute('aria-expanded', !open ? 'true' : 'false');
+    });
+    document.getElementById('btn-add-semi')?.addEventListener('click', () => safeAction(addSemi));
+    panel.querySelectorAll('[data-save-semi]').forEach(b => b.addEventListener('click', () => safeAction(() => saveSemi(b.dataset.saveSemi))));
+    panel.querySelectorAll('[data-del-semi]').forEach(b => b.addEventListener('click', () => safeAction(() => deleteSemi(b.dataset.delSemi))));
+}
+
+async function addSemi() {
+    const p1 = document.getElementById('s-pareja1').value.trim();
+    const p2 = document.getElementById('s-pareja2').value.trim();
+    const cruce = parseInt(document.getElementById('s-cruce').value) || 0;
+    if (!p1 || !p2) { toast('Ingresá los nombres de ambas parejas', 'error'); return; }
+    if (!cruce) { toast('Ingresá el número de cruce', 'error'); return; }
+    showLoading('Agregando semifinal...');
+    try {
+        await addDoc(col('semifinales'), {
+            cruce, pareja1_nombre: p1, pareja2_nombre: p2, score: '', ganador: ''
+        });
+        toast('Semifinal agregada', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al agregar semifinal', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }
 
 async function saveSemi(id) {
@@ -1475,10 +1599,9 @@ async function saveSemi(id) {
     const ganador = document.getElementById('s-ganador-' + id).value;
     showLoading('Guardando semifinal...');
     try {
-        await updateDoc(doc(db, 'semifinales', id), { score, ganador });
+        await updateDoc(docRef('semifinales', id), { score, ganador });
         toast('Semifinal guardada', 'success');
         await refreshData();
-        if (allSemis.every(s => s.ganador)) await generarFinal();
     } catch (e) {
         toast('Error al guardar', 'error');
         console.error(e);
@@ -1488,13 +1611,10 @@ async function saveSemi(id) {
 }
 
 async function deleteSemi(id) {
-    if (!confirm('¿Eliminar esta semifinal? Se eliminará también la final asociada.')) return;
+    if (!confirm('\u00bfEliminar esta semifinal?')) return;
     showLoading('Eliminando semifinal...');
     try {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'semifinales', id));
-        allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
-        await batch.commit();
+        await deleteDoc(docRef('semifinales', id));
         toast('Semifinal eliminada', 'success');
         await refreshData();
     } catch (e) {
@@ -1505,75 +1625,86 @@ async function deleteSemi(id) {
     }
 }
 
-// ═══════════════════════════════════════════
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 // FINAL
-// ═══════════════════════════════════════════
-async function generarFinal() {
-    if (allSemis.length < 2 || !allSemis[0].ganador || !allSemis[1].ganador) return;
-    const fP1 = allSemis[0].ganador === 'pareja1' ? allSemis[0].pareja1_nombre : allSemis[0].pareja2_nombre;
-    const fP2 = allSemis[1].ganador === 'pareja1' ? allSemis[1].pareja1_nombre : allSemis[1].pareja2_nombre;
-    const batch = writeBatch(db);
-    allFinales.forEach(f => batch.delete(doc(db, 'final', f.id)));
-    const ref = doc(collection(db, 'final'));
-    batch.set(ref, { pareja1_nombre: fP1, pareja2_nombre: fP2, score: '', ganador: '' });
-    await batch.commit();
-    await refreshData();
-}
-
+// \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
 function renderFinalAdmin() {
     const panel = document.getElementById('panel-final-admin');
-    if (!allSemis.length || !allSemis.every(s => s.ganador)) {
-        panel.innerHTML = '<div class="empty-state" style="padding:2rem;"><span class="material-symbols-outlined">hourglass_empty</span><p>A la espera de que se completen las semifinales</p></div>';
-        return;
-    }
-    if (!allFinales.length) {
-        generarFinal().then(() => renderFinalAdmin());
-        return;
-    }
-    const f = allFinales[0];
-    const hasWinner = f.ganador;
-    const winnerName = hasWinner
-        ? (f.ganador === 'pareja1' ? fixNames(f.pareja1_nombre) : fixNames(f.pareja2_nombre))
-        : '';
-    let html = '<div class="card">';
-    if (hasWinner) {
-        html +=
-            '<div class="champion-card" style="margin-bottom:0.75rem;">' +
-            '<span class="champion-trophy">🏆</span>' +
-            '<div class="champion-title">¡CAMPEONES!</div>' +
-            '<div class="champion-name">' + esc(winnerName) + '</div>' +
-            (f.score ? '<div class="champion-score">Final: ' + esc(f.score) + '</div>' : '') +
-            '</div>';
-    }
-    html +=
-        '<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.5rem;">' +
-        '<span class="material-symbols-outlined" style="font-size:1rem;color:var(--secondary);">workspace_premium</span>' +
-        '<span style="font-family:Lexend;font-weight:600;font-size:0.85rem;color:var(--on-surface-variant);">Gran Final</span>' +
+
+    let html =
+        '<div class="card">' +
+        '<button class="collapse-toggle" id="f-toggle-form" type="button" aria-expanded="false">' +
+        '<span class="collapse-toggle-left"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--secondary);">workspace_premium</span> Agregar Final</span>' +
+        '<span class="material-symbols-outlined chevron">expand_more</span>' +
+        '</button>' +
+        '<div id="f-form-body" style="display:none;">' +
+        '<div class="match-form">' +
+        '<div class="form-group"><label>Pareja 1</label><input type="text" id="f-pareja1" placeholder="Nombre pareja 1"></div>' +
+        '<div class="form-group"><label>Pareja 2</label><input type="text" id="f-pareja2" placeholder="Nombre pareja 2"></div>' +
+        '<div class="btn-group-spaced" style="margin-top:0.75rem;">' +
+        '<button class="btn btn-primary" id="btn-add-final"><span class="material-symbols-outlined" style="font-size:1rem;">add</span> Agregar Final</button>' +
         '</div>' +
-        '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(f.pareja1_nombre || '—')) + '</div>' +
-        '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
-        '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(f.pareja2_nombre || '—')) + '</div>' +
-        '<div class="form-row" style="align-items:center;">' +
-        '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="f-score-' + f.id + '" placeholder="4-2" value="' + esc(f.score || '') + '" style="max-width:80px;"></div>' +
-        '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="f-ganador-' + f.id + '">' +
-        '<option value="">— Seleccionar —</option>' +
-        '<option value="pareja1"' + (f.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(f.pareja1_nombre || 'Pareja 1')) + '</option>' +
-        '<option value="pareja2"' + (f.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(f.pareja2_nombre || 'Pareja 2')) + '</option>' +
-        '</select></div>' +
         '</div>' +
-        '<div class="btn-group-spaced">' +
-        '<button class="btn btn-sm btn-primary" data-save-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">save</span> ' + (hasWinner ? 'Actualizar' : 'Guardar') + '</button>' +
-        '<button class="btn btn-sm btn-danger" data-del-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
         '</div>' +
         '</div>';
+
+    if (allFinales.length) {
+        const f = allFinales[0];
+        const hasWinner = f.ganador;
+        const winnerName = hasWinner
+            ? (f.ganador === 'pareja1' ? fixNames(f.pareja1_nombre) : fixNames(f.pareja2_nombre))
+            : '';
+        if (hasWinner) {
+            html +=
+                '<div class="champion-card" style="margin-bottom:0.75rem;">' +
+                '<span class="champion-trophy">\ud83c\udfc6</span>' +
+                '<div class="champion-title">\u00a1CAMPEONES!</div>' +
+                '<div class="champion-name">' + esc(winnerName) + '</div>' +
+                (f.score ? '<div class="champion-score">Final: ' + esc(f.score) + '</div>' : '') +
+                '</div>';
+        }
+        html += '<div class="admin-section-title"><span class="material-symbols-outlined" style="font-size:1rem;">workspace_premium</span> Gran Final</div>';
+        html +=
+            '<div class="card">' +
+            '<div style="font-size:0.82rem;color:var(--team);margin-bottom:0.15rem;">' + esc(fixNames(f.pareja1_nombre || '\u2014')) + '</div>' +
+            '<div style="font-size:0.65rem;color:var(--on-surface-variant-30);text-transform:uppercase;font-weight:600;margin-bottom:0.25rem;">vs</div>' +
+            '<div style="font-size:0.82rem;color:var(--secondary);margin-bottom:0.75rem;">' + esc(fixNames(f.pareja2_nombre || '\u2014')) + '</div>' +
+            '<div class="form-row" style="align-items:center;">' +
+            '<div class="form-group" style="margin-bottom:0;"><label>Score</label><input type="text" id="f-score-' + f.id + '" placeholder="4-2" value="' + esc(f.score || '') + '" style="max-width:80px;"></div>' +
+            '<div class="form-group" style="margin-bottom:0;"><label>Ganador</label><select id="f-ganador-' + f.id + '">' +
+            '<option value="">\u2014 Seleccionar \u2014</option>' +
+            '<option value="pareja1"' + (f.ganador === 'pareja1' ? ' selected' : '') + '>' + esc(fixNames(f.pareja1_nombre || 'Pareja 1')) + '</option>' +
+            '<option value="pareja2"' + (f.ganador === 'pareja2' ? ' selected' : '') + '>' + esc(fixNames(f.pareja2_nombre || 'Pareja 2')) + '</option>' +
+            '</select></div>' +
+            '</div>' +
+            '<div class="btn-group-spaced">' +
+            '<button class="btn btn-sm btn-primary" data-save-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">save</span> ' + (hasWinner ? 'Actualizar' : 'Guardar') + '</button>' +
+            '<button class="btn btn-sm btn-danger" data-del-final="' + f.id + '"><span class="material-symbols-outlined" style="font-size:0.8rem;">delete</span></button>' +
+            '</div>' +
+            '</div>';
+    } else {
+        html += '<div class="empty-state" style="padding:1.5rem;"><span class="material-symbols-outlined">workspace_premium</span><p>No hay final creada. Agregá la final arriba.</p></div>';
+    }
+
     panel.innerHTML = html;
 
-    panel.querySelector('[data-save-final]').addEventListener('click', async () => {
+    document.getElementById('f-toggle-form')?.addEventListener('click', () => {
+        const body = document.getElementById('f-form-body');
+        const btn = document.getElementById('f-toggle-form');
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        btn.classList.toggle('open', !open);
+        btn.querySelector('.chevron').textContent = open ? 'expand_more' : 'expand_less';
+        btn.setAttribute('aria-expanded', !open ? 'true' : 'false');
+    });
+    document.getElementById('btn-add-final')?.addEventListener('click', () => safeAction(addFinal));
+    panel.querySelector('[data-save-final]')?.addEventListener('click', () => safeAction(async () => {
+        const f = allFinales[0];
         const score = document.getElementById('f-score-' + f.id).value.trim();
         const ganador = document.getElementById('f-ganador-' + f.id).value;
         showLoading('Guardando final...');
         try {
-            await updateDoc(doc(db, 'final', f.id), { score, ganador });
+            await updateDoc(docRef('final', f.id), { score, ganador });
             toast('Final guardada', 'success');
             await refreshData();
         } catch (e) {
@@ -1582,12 +1713,12 @@ function renderFinalAdmin() {
         } finally {
             hideLoading();
         }
-    });
-    panel.querySelector('[data-del-final]').addEventListener('click', async () => {
-        if (!confirm('¿Eliminar la final?')) return;
+    }));
+    panel.querySelector('[data-del-final]')?.addEventListener('click', () => safeAction(async () => {
+        if (!confirm('\u00bfEliminar la final?')) return;
         showLoading('Eliminando final...');
         try {
-            await deleteDoc(doc(db, 'final', f.id));
+            await deleteDoc(docRef('final', allFinales[0].id));
             toast('Final eliminada', 'success');
             await refreshData();
         } catch (e) {
@@ -1596,5 +1727,24 @@ function renderFinalAdmin() {
         } finally {
             hideLoading();
         }
-    });
+    }));
+}
+
+async function addFinal() {
+    const p1 = document.getElementById('f-pareja1').value.trim();
+    const p2 = document.getElementById('f-pareja2').value.trim();
+    if (!p1 || !p2) { toast('Ingresá los nombres de ambas parejas', 'error'); return; }
+    showLoading('Agregando final...');
+    try {
+        await addDoc(col('final'), {
+            pareja1_nombre: p1, pareja2_nombre: p2, score: '', ganador: ''
+        });
+        toast('Final agregada', 'success');
+        await refreshData();
+    } catch (e) {
+        toast('Error al agregar final', 'error');
+        console.error(e);
+    } finally {
+        hideLoading();
+    }
 }

@@ -3,29 +3,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    match /config/{docId} {
+      allow read, write: if true;
+    }
+
+    match /torneos/{tournamentId} {
+      allow read, write: if true;
+
+      match /{subcollection}/{document=**} {
+        allow read, write: if true;
+      }
+    }
+
     match /jugadores/{jugadorId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /partidos_eliminatoria/{partidoId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /cuartos/{cuartoId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /semifinales/{semiId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /final/{finalId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
   }
 }

@@ -11,7 +11,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="css/styles.css?v=26">
+    <link rel="stylesheet" href="css/styles.css?v=28">
 </head>
 <body class="admin-body">
 
@@ -57,7 +57,10 @@
                         <img src="logo.png" alt="Logo" class="logo-img">
                         <h1>Admin</h1>
                     </div>
-                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <div id="tournament-selector-wrap" style="display:none;margin-left:0.75rem;">
+                        <select id="tournament-selector" class="tournament-select"></select>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto;">
                         <a href="index.html" class="logout-btn" style="text-decoration:none;">
                             <span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span> Volver
                         </a>
@@ -90,6 +93,9 @@
                     <button class="admin-tab-btn" data-panel="final-admin" onclick="showPanel('final-admin')">
                         <span class="material-symbols-outlined" style="font-size:1rem;">workspace_premium</span> Final
                     </button>
+                    <button class="admin-tab-btn" data-panel="torneos" onclick="showPanel('torneos')">
+                        <span class="material-symbols-outlined" style="font-size:1rem;">emoji_events</span> Torneos
+                    </button>
                 </nav>
                 <button class="tab-scroll-btn" aria-label="Más pestañas">
                     <span class="material-symbols-outlined">chevron_right</span>
@@ -104,6 +110,7 @@
             <div id="panel-cuartos-admin" class="admin-panel"></div>
             <div id="panel-semis-admin" class="admin-panel"></div>
             <div id="panel-final-admin" class="admin-panel"></div>
+            <div id="panel-torneos" class="admin-panel"></div>
         </div>
     </main>
 
@@ -111,7 +118,7 @@
         <p>Desarrollado por JDM Services Systems</p>
     </footer>
 
-    <script type="module" src="js/admin.js?v=28"></script>
+    <script type="module" src="js/admin.js?v=30"></script>
 
 </body>
 </html>
