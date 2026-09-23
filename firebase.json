@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "torneo-americano-jdm-2",
+    "target": "torneo-americano-jdm-2",
     "public": "public",
     "headers": [
       {
