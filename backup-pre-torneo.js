@@ -5,12 +5,12 @@ import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCotL1eksVmwdkYql9QTpX3VFN597NgYAA",
-  authDomain: "torneo-americano-jdm.firebaseapp.com",
-  projectId: "torneo-americano-jdm",
-  storageBucket: "torneo-americano-jdm.firebasestorage.app",
-  messagingSenderId: "830482002349",
-  appId: "1:830482002349:web:26961fdc22e3785300f124"
+  apiKey: "AIzaSyAvU8uKaivoZH_401zpXyM5-OOGgi5OGcw",
+  authDomain: "torneos-tenis-jdm.firebaseapp.com",
+  projectId: "torneos-tenis-jdm",
+  storageBucket: "torneos-tenis-jdm.firebasestorage.app",
+  messagingSenderId: "951550758841",
+  appId: "1:951550758841:web:b4baab45dde503d0717068"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -50,7 +50,7 @@ async function backup() {
   // 1. Leer config de torneos activos
   let tournamentIds = [];
   try {
-    const configSnap = await getDoc(doc(db, 'config', 'activeTournament'));
+    const configSnap = await getDoc(doc(db, 'config', 'torneosAmericano_activeTournament'));
     if (configSnap.exists()) {
       const cfg = configSnap.data();
       if (cfg.activeTournamentIds) tournamentIds = cfg.activeTournamentIds;
@@ -59,12 +59,12 @@ async function backup() {
     writeFileSync(join(backupDir, '_config.json'), JSON.stringify(configSnap.exists() ? configSnap.data() : {}, null, 2));
     console.log(`Config leída: ${tournamentIds.length} torneo(s) activo(s)`);
   } catch (e) {
-    console.log('No se pudo leer config/activeTournament:', e.message);
+    console.log('No se pudo leer config/torneosAmericano_activeTournament:', e.message);
   }
 
   // 2. Backup de documentos de torneos
   try {
-    const torneosSnap = await getDocs(collection(db, 'torneos'));
+    const torneosSnap = await getDocs(collection(db, 'torneosAmericano'));
     const torneosDocs = torneosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     writeFileSync(join(backupDir, '_torneos.json'), JSON.stringify(torneosDocs, null, 2));
     summary['_torneos'] = torneosDocs.length;
@@ -84,7 +84,7 @@ async function backup() {
 
     for (const colName of COLLECTIONS) {
       console.log(`Exportando ${colName}...`);
-      const ref = collection(db, 'torneos', torneoId, colName);
+      const ref = collection(db, 'torneosAmericano', torneoId, colName);
       const docs = await backupCollection(db, ref, colName);
       const filePath = join(torneoDir, `${colName}.json`);
       writeFileSync(filePath, JSON.stringify(docs, null, 2));

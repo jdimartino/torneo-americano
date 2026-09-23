@@ -23,27 +23,27 @@ export function setActiveTournament(id, data) {
 }
 
 export function col(name) {
-    return collection(db, 'torneos', _activeTournamentId, name);
+    return collection(db, 'torneosAmericano', _activeTournamentId, name);
 }
 
 export function docRef(name, id) {
-    return doc(db, 'torneos', _activeTournamentId, name, id);
+    return doc(db, 'torneosAmericano', _activeTournamentId, name, id);
 }
 
 export function docRefAuto(name) {
-    return doc(collection(db, 'torneos', _activeTournamentId, name));
+    return doc(collection(db, 'torneosAmericano', _activeTournamentId, name));
 }
 
 export function torneosCol() {
-    return collection(db, 'torneos');
+    return collection(db, 'torneosAmericano');
 }
 
 export function torneoRef(id) {
-    return doc(db, 'torneos', id);
+    return doc(db, 'torneosAmericano', id);
 }
 
 export function configDoc() {
-    return doc(db, 'config', 'activeTournament');
+    return doc(db, 'config', 'torneosAmericano_activeTournament');
 }
 
 export async function loadTournamentConfig() {

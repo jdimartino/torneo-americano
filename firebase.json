@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "torneo-americano-jdm-2",
     "public": "public",
     "headers": [
       {
@@ -20,8 +21,5 @@
       { "source": "/admin.html", "destination": "/admin.html" },
       { "source": "**", "destination": "/index.html" }
     ]
-  },
-  "firestore": {
-    "rules": "firestore.rules"
   }
 }

@@ -3,12 +3,12 @@ import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from 'fireb
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCotL1eksVmwdkYql9QTpX3VFN597NgYAA",
-  authDomain: "torneo-americano-jdm.firebaseapp.com",
-  projectId: "torneo-americano-jdm",
-  storageBucket: "torneo-americano-jdm.firebasestorage.app",
-  messagingSenderId: "830482002349",
-  appId: "1:830482002349:web:26961fdc22e3785300f124"
+  apiKey: "AIzaSyAvU8uKaivoZH_401zpXyM5-OOGgi5OGcw",
+  authDomain: "torneos-tenis-jdm.firebaseapp.com",
+  projectId: "torneos-tenis-jdm",
+  storageBucket: "torneos-tenis-jdm.firebasestorage.app",
+  messagingSenderId: "951550758841",
+  appId: "1:951550758841:web:b4baab45dde503d0717068"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -31,7 +31,7 @@ async function cleanAccents() {
   await signInWithEmailAndPassword(auth, email, password);
   console.log('OK.\n');
 
-  const configSnap = await getDoc(doc(db, 'config', 'activeTournament'));
+  const configSnap = await getDoc(doc(db, 'config', 'torneosAmericano_activeTournament'));
   let tournamentIds = [];
   if (configSnap.exists()) {
     const cfg = configSnap.data();
@@ -48,7 +48,7 @@ async function cleanAccents() {
 
   for (const torneoId of tournamentIds) {
     console.log(`\n--- Torneo: ${torneoId} ---`);
-    const snap = await getDocs(collection(db, 'torneos', torneoId, 'jugadores'));
+    const snap = await getDocs(collection(db, 'torneosAmericano', torneoId, 'jugadores'));
     let updated = 0;
 
     for (const d of snap.docs) {
@@ -58,7 +58,7 @@ async function cleanAccents() {
 
       if (newNombre !== data.nombre || newApellidos !== data.apellidos) {
         console.log(`  ${data.nombre || ''} ${data.apellidos || ''} → ${newNombre} ${newApellidos}`);
-        await updateDoc(doc(db, 'torneos', torneoId, 'jugadores', d.id), {
+        await updateDoc(doc(db, 'torneosAmericano', torneoId, 'jugadores', d.id), {
           nombre: newNombre,
           apellidos: newApellidos
         });

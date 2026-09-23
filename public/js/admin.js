@@ -228,16 +228,22 @@ window.addEventListener('popstate', () => {
 // ── Migration: detect root-level collections and move into torneos/ ──
 async function migrateIfRootExists() {
     try {
-        const rootSnap = await getDocs(collection(db, 'jugadores'));
+        let rootSnap;
+        try {
+            rootSnap = await getDocs(collection(db, 'jugadores'));
+        } catch (e) {
+            if (e && e.code === 'permission-denied') return false;
+            throw e;
+        }
         if (rootSnap.empty) return false;
-        const configSnap = await getDoc(doc(db, 'config', 'activeTournament'));
+        const configSnap = await getDoc(doc(db, 'config', 'torneosAmericano_activeTournament'));
         if (configSnap.exists()) {
             const cfg = configSnap.data();
             if ((cfg.activeTournamentIds && cfg.activeTournamentIds.length > 0) || cfg.tournamentId) return false;
         }
         if (!confirm('Se detectaron datos en la raíz. ¿Migrarlos al sistema de torneos?\nEsto creará el torneo "Torneo Masculino Americano Julio 2026" y moverá todos los datos.')) return false;
         showLoading('Migrando datos al sistema de torneos...');
-        const torneoRef = await addDoc(collection(db, 'torneos'), {
+        const torneoRef = await addDoc(collection(db, 'torneosAmericano'), {
             name: 'Torneo Masculino Americano Julio 2026',
             status: 'active',
             fechaCreacion: new Date(),
@@ -261,14 +267,14 @@ async function migrateIfRootExists() {
             let batch = writeBatch(db);
             let cnt = 0;
             for (const d of snap.docs) {
-                batch.set(doc(db, 'torneos', tid, sub, d.id), d.data());
+                batch.set(doc(db, 'torneosAmericano', tid, sub, d.id), d.data());
                 batch.delete(d.ref);
                 cnt++;
                 if (cnt % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
             }
             if (cnt % 450 !== 0) await batch.commit();
         }
-        await setDoc(doc(db, 'config', 'activeTournament'), { activeTournamentIds: [tid], selectedTournamentId: tid });
+        await setDoc(doc(db, 'config', 'torneosAmericano_activeTournament'), { activeTournamentIds: [tid], selectedTournamentId: tid });
         await loadTournamentConfig();
         hideLoading();
         toast('Migración completada', 'success');

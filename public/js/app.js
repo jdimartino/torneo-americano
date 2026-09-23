@@ -435,7 +435,7 @@ let _tournamentList = [];
 
 async function loadTournamentList() {
     try {
-        const snap = await getDocs(collection(db, 'torneos'));
+        const snap = await getDocs(collection(db, 'torneosAmericano'));
         _tournamentList = snap.docs.map(d => ({ id: d.id, name: d.data().name }));
     } catch (e) {
         _tournamentList = [];

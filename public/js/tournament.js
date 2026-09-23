@@ -78,8 +78,8 @@ export async function deleteTournament(id) {
     const batch = writeBatch(db);
     const subcols = ['jugadores', 'partidos_eliminatoria', 'cuartos', 'semifinales', 'final'];
     for (const sub of subcols) {
-        const snap = await getDocs(collection(db, 'torneos', id, sub));
-        snap.docs.forEach(d => batch.delete(doc(db, 'torneos', id, sub, d.id)));
+        const snap = await getDocs(collection(db, 'torneosAmericano', id, sub));
+        snap.docs.forEach(d => batch.delete(doc(db, 'torneosAmericano', id, sub, d.id)));
     }
     batch.delete(torneoRef(id));
     await batch.commit();
